@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { deleteUploadedFile, saveUploadedFile } from "@/lib/upload";
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const template = await prisma.template.findUnique({ where: { id: params.id } });
+  if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
+  return NextResponse.json({ template });
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const existing = await prisma.template.findUnique({ where: { id: params.id } });
+  if (!existing) return NextResponse.json({ error: "Template not found" }, { status: 404 });
+
+  const contentType = req.headers.get("content-type") || "";
+  const data: Record<string, unknown> = {};
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await req.formData();
+    if (form.has("name")) data.name = (form.get("name") as string)?.trim();
+    if (form.has("content")) data.content = form.get("content") as string;
+    const file = form.get("media") as File | null;
+    const removeMedia = form.get("removeMedia") === "true";
+    if (file && file.size > 0) {
+      if (existing.mediaPath) deleteUploadedFile(existing.mediaPath);
+      const saved = await saveUploadedFile(file, "templates");
+      data.mediaPath = saved.relativePath;
+      data.mediaName = saved.fileName;
+      data.mediaMime = saved.mime;
+    } else if (removeMedia && existing.mediaPath) {
+      deleteUploadedFile(existing.mediaPath);
+      data.mediaPath = null;
+      data.mediaName = null;
+      data.mediaMime = null;
+    }
+  } else {
+    const body = await req.json().catch(() => ({}));
+    if (body.name !== undefined) data.name = String(body.name).trim();
+    if (body.content !== undefined) data.content = String(body.content);
+  }
+
+  const template = await prisma.template.update({ where: { id: params.id }, data });
+  return NextResponse.json({ template });
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const existing = await prisma.template.findUnique({ where: { id: params.id } });
+  if (!existing) return NextResponse.json({ error: "Template not found" }, { status: 404 });
+
+  const usedByCampaign = await prisma.campaign.count({ where: { templateId: params.id } });
+  if (usedByCampaign > 0) {
+    return NextResponse.json(
+      { error: "Cannot delete a template used by existing campaigns." },
+      { status: 400 }
+    );
+  }
+
+  if (existing.mediaPath) deleteUploadedFile(existing.mediaPath);
+  await prisma.template.delete({ where: { id: params.id } });
+  return NextResponse.json({ ok: true });
+}

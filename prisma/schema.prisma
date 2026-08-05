@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  name      String
+  clientId  String   @unique
+  phone     String?
+  status    String   @default("disconnected") // disconnected | initializing | qr | authenticated | connected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns Campaign[]
+
+  @@map("devices")
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  content   String
+  mediaPath String?
+  mediaName String?
+  mediaMime String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns Campaign[]
+
+  @@map("templates")
+}
+
+model Group {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+
+  contacts       Contact[]
+  campaignGroups CampaignGroup[]
+
+  @@map("groups")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  fields    String? // JSON string of custom fields, e.g. {"company":"Acme"}
+  groupId   String?
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages CampaignMessage[]
+
+  @@map("contacts")
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  name        String
+  status      String    @default("draft") // draft | queued | running | paused | completed | stopped | failed
+  deviceId    String
+  device      Device    @relation(fields: [deviceId], references: [id])
+  templateId  String
+  template    Template  @relation(fields: [templateId], references: [id])
+  minDelay    Int       @default(5) // seconds
+  maxDelay    Int       @default(15) // seconds
+  targetAll   Boolean   @default(false)
+  totalCount  Int       @default(0)
+  sentCount   Int       @default(0)
+  failedCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  groups   CampaignGroup[]
+  messages CampaignMessage[]
+
+  @@map("campaigns")
+}
+
+model CampaignGroup {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  groupId    String
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, groupId])
+  @@map("campaign_groups")
+}
+
+model CampaignMessage {
+  id         String    @id @default(cuid())
+  campaignId String
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId  String
+  contact    Contact   @relation(fields: [contactId], references: [id])
+  status     String    @default("queued") // queued | sending | sent | failed | skipped
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("campaign_messages")
+}
