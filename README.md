@@ -106,6 +106,7 @@ you care about not having to re-scan QR codes after a redeploy.
 | `SESSION_SECRET`   | Secret used to sign the session JWT                   |
 | `PORT` / `HOSTNAME`| Server bind address (default `0.0.0.0:3000`)          |
 | `DEVICE_LIMIT`     | Max number of WhatsApp devices (default `5`)          |
+| `CHROME_PATH`      | Optional path to a system Chrome/Chromium binary for whatsapp-web.js to launch, instead of the one Puppeteer downloads |
 
 ## Disclaimer
 

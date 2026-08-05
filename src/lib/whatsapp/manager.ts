@@ -53,6 +53,7 @@ class WhatsAppManager extends EventEmitter {
       authStrategy: new LocalAuth({ clientId, dataPath: AUTH_DIR }),
       puppeteer: {
         headless: true,
+        executablePath: process.env.CHROME_PATH || undefined,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
