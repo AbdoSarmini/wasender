@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
-import { Plus, MessageSquare, Play, Pause, Square } from "lucide-react";
+import { Plus, MessageSquare, Play, Pause, Square, Copy } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -16,13 +17,16 @@ interface Campaign {
   failedCount: number;
   totalCount: number;
   createdAt: string;
+  scheduledAt: string | null;
   device: { name: string; status: string };
   template: { name: string };
 }
 
 export default function CampaignsPage() {
+  const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await apiFetch<{ campaigns: Campaign[] }>("/api/campaigns");
@@ -43,9 +47,23 @@ export default function CampaignsPage() {
     };
   }, [load]);
 
-  async function handleAction(id: string, action: "start" | "pause" | "resume" | "stop") {
+  async function handleAction(id: string, action: "start" | "pause" | "resume" | "stop" | "unschedule") {
     await apiFetch(`/api/campaigns/${id}/${action}`, { method: "POST" }).catch((e) => alert(e.message));
     load();
+  }
+
+  async function handleDuplicate(id: string) {
+    setDuplicatingId(id);
+    try {
+      const data = await apiFetch<{ campaign: { id: string } }>(`/api/campaigns/${id}/duplicate`, {
+        method: "POST",
+      });
+      router.push(`/campaigns/${data.campaign.id}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to duplicate campaign");
+    } finally {
+      setDuplicatingId(null);
+    }
   }
 
   return (
@@ -78,7 +96,7 @@ export default function CampaignsPage() {
           {campaigns.map((c) => {
             const progress = c.totalCount > 0 ? Math.round(((c.sentCount + c.failedCount) / c.totalCount) * 100) : 0;
             return (
-              <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-xs p-5">
                 <div className="flex items-start justify-between gap-4">
                   <Link href={`/campaigns/${c.id}`} className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -88,6 +106,9 @@ export default function CampaignsPage() {
                     <p className="text-sm text-gray-500 mt-1">
                       {c.device.name} · {c.template.name} · {c.sentCount}/{c.totalCount} sent
                       {c.failedCount > 0 ? `, ${c.failedCount} failed` : ""}
+                      {c.status === "scheduled" && c.scheduledAt
+                        ? ` · Scheduled for ${new Date(c.scheduledAt).toLocaleString()}`
+                        : ""}
                     </p>
                     <div className="mt-3 w-full bg-gray-100 rounded-full h-2 max-w-md">
                       <div
@@ -97,12 +118,20 @@ export default function CampaignsPage() {
                     </div>
                   </Link>
                   <div className="flex items-center gap-2 shrink-0">
-                    {(c.status === "draft" || c.status === "stopped") && (
+                    {(c.status === "draft" || c.status === "stopped" || c.status === "scheduled") && (
                       <button
                         onClick={() => handleAction(c.id, "start")}
                         className="flex items-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg px-3 py-2 hover:bg-brand-100"
                       >
-                        <Play size={14} /> Start
+                        <Play size={14} /> {c.status === "scheduled" ? "Start now" : "Start"}
+                      </button>
+                    )}
+                    {c.status === "scheduled" && (
+                      <button
+                        onClick={() => handleAction(c.id, "unschedule")}
+                        className="flex items-center gap-1.5 text-sm font-medium bg-gray-50 text-gray-600 rounded-lg px-3 py-2 hover:bg-gray-100"
+                      >
+                        Cancel schedule
                       </button>
                     )}
                     {c.status === "running" && (
@@ -129,6 +158,14 @@ export default function CampaignsPage() {
                         <Square size={14} /> Stop
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDuplicate(c.id)}
+                      disabled={duplicatingId === c.id}
+                      className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+                      title="Duplicate campaign"
+                    >
+                      <Copy size={14} /> {duplicatingId === c.id ? "Duplicating…" : "Duplicate"}
+                    </button>
                   </div>
                 </div>
               </div>

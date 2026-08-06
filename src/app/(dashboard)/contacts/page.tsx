@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Plus, Upload, Users, Trash2, Search, Loader2 } from "lucide-react";
+import { Plus, Upload, Download, Users, Trash2, Search, Loader2 } from "lucide-react";
 
 interface Group {
   id: string;
@@ -140,6 +140,17 @@ export default function ContactsPage() {
     loadContacts();
   }
 
+  function handleDownloadSample() {
+    const csv = "name,phone\nJohn Doe,+1234567890\nJane Smith,+1987654321\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sample-contacts.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
       <PageHeader
@@ -160,6 +171,12 @@ export default function ContactsPage() {
               <Upload size={16} /> Import CSV
             </button>
             <button
+              onClick={handleDownloadSample}
+              className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-gray-50"
+            >
+              <Download size={16} /> Sample CSV
+            </button>
+            <button
               onClick={() => setShowAdd(true)}
               className="flex items-center gap-2 bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-700"
             >
@@ -177,13 +194,13 @@ export default function ContactsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or phone..."
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <select
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
           >
             <option value="all">All groups</option>
             <option value="none">Ungrouped</option>
@@ -196,7 +213,7 @@ export default function ContactsPage() {
           <span className="text-sm text-gray-500">{total} contacts</span>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
               <tr>
@@ -240,7 +257,7 @@ export default function ContactsPage() {
               value={addName}
               onChange={(e) => setAddName(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <div>
@@ -250,7 +267,7 @@ export default function ContactsPage() {
               onChange={(e) => setAddPhone(e.target.value)}
               required
               placeholder="e.g. 15551234567"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <div>
@@ -258,7 +275,7 @@ export default function ContactsPage() {
             <select
               value={addGroupId}
               onChange={(e) => setAddGroupId(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             >
               <option value="">No group</option>
               {groups.map((g) => (
@@ -309,7 +326,7 @@ export default function ContactsPage() {
                 setImportGroupChoice(e.target.value);
                 setImportNewGroup("");
               }}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             >
               <option value="">No group</option>
               {groups.map((g) => (
@@ -325,7 +342,7 @@ export default function ContactsPage() {
               value={importNewGroup}
               onChange={(e) => setImportNewGroup(e.target.value)}
               placeholder="e.g. Newsletter subscribers"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <button
@@ -346,7 +363,7 @@ export default function ContactsPage() {
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
               placeholder="New group name"
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
             <button type="submit" className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700">
               Add

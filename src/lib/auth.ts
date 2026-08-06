@@ -1,17 +1,20 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "wasender_session";
 const alg = "HS256";
+
+export type SessionPayload = { sub: string; email: string; role: string };
 
 function getSecret() {
   const secret = process.env.SESSION_SECRET || "dev-insecure-secret-change-me";
   return new TextEncoder().encode(secret);
 }
 
-export async function createSessionToken(email: string) {
-  return new SignJWT({ email })
+export async function createSessionToken(user: { id: string; email: string; role: string }) {
+  return new SignJWT({ sub: user.id, email: user.email, role: user.role })
     .setProtectedHeader({ alg })
     .setIssuedAt()
     .setExpirationTime("30d")
@@ -21,7 +24,7 @@ export async function createSessionToken(email: string) {
 export async function verifySessionToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    return payload as { email: string };
+    return payload as unknown as SessionPayload;
   } catch {
     return null;
   }
@@ -50,17 +53,11 @@ export async function clearSessionCookie() {
   store.delete(SESSION_COOKIE);
 }
 
-export function validateCredentials(email: string, password: string) {
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
-  const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
-  const adminPasswordPlain = process.env.ADMIN_PASSWORD || "changeme123";
-
-  if (email.trim().toLowerCase() !== adminEmail.trim().toLowerCase()) return false;
-
-  if (adminPasswordHash) {
-    return bcrypt.compareSync(password, adminPasswordHash);
-  }
-  return password === adminPasswordPlain;
+export async function validateCredentials(email: string, password: string) {
+  const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  if (!user) return null;
+  const ok = bcrypt.compareSync(password, user.passwordHash);
+  return ok ? user : null;
 }
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;

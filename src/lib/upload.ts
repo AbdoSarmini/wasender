@@ -26,7 +26,7 @@ export async function saveUploadedFile(file: File, subdir: string) {
 }
 
 export function deleteUploadedFile(relativePath: string) {
-  const fullPath = path.join(process.cwd(), relativePath);
+  const fullPath = path.join(/* turbopackIgnore: true */ process.cwd(), relativePath);
   if (fs.existsSync(fullPath)) {
     fs.rmSync(fullPath, { force: true });
   }

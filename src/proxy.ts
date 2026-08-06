@@ -8,18 +8,18 @@ function getSecret() {
   return new TextEncoder().encode(secret);
 }
 
-async function isAuthenticated(req: NextRequest) {
+async function getSessionPayload(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE)?.value;
-  if (!token) return false;
+  if (!token) return null;
   try {
-    await jwtVerify(token, getSecret());
-    return true;
+    const { payload } = await jwtVerify(token, getSecret());
+    return payload as { email?: string; role?: string };
   } catch {
-    return false;
+    return null;
   }
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isPublic =
@@ -32,15 +32,25 @@ export async function middleware(req: NextRequest) {
 
   if (isPublic) return NextResponse.next();
 
-  const authed = await isAuthenticated(req);
+  const session = await getSessionPayload(req);
 
-  if (!authed) {
+  if (!session) {
     if (pathname.startsWith("/api")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  const isAdminOnly = pathname.startsWith("/api/users") || pathname.startsWith("/users");
+  if (isAdminOnly && session.role !== "admin") {
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

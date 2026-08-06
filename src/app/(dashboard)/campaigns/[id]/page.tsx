@@ -6,7 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
-import { Play, Pause, Square, Trash2, ArrowLeft } from "lucide-react";
+import { Play, Pause, Square, Trash2, ArrowLeft, Copy, Pencil } from "lucide-react";
 import Link from "next/link";
 
 interface Message {
@@ -14,7 +14,9 @@ interface Message {
   status: string;
   error: string | null;
   sentAt: string | null;
-  contact: { name: string; phone: string };
+  contact: { name: string; phone: string } | null;
+  rawName: string | null;
+  rawPhone: string | null;
 }
 
 interface CampaignDetail {
@@ -27,6 +29,7 @@ interface CampaignDetail {
   failedCount: number;
   totalCount: number;
   createdAt: string;
+  scheduledAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
   device: { name: string };
@@ -39,6 +42,7 @@ export default function CampaignDetailPage() {
   const router = useRouter();
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [duplicating, setDuplicating] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -64,7 +68,7 @@ export default function CampaignDetailPage() {
     };
   }, [params.id, load]);
 
-  async function handleAction(action: "start" | "pause" | "resume" | "stop") {
+  async function handleAction(action: "start" | "pause" | "resume" | "stop" | "unschedule") {
     try {
       await apiFetch(`/api/campaigns/${params.id}/${action}`, { method: "POST" });
       load();
@@ -77,6 +81,20 @@ export default function CampaignDetailPage() {
     if (!confirm("Delete this campaign and its logs?")) return;
     await apiFetch(`/api/campaigns/${params.id}`, { method: "DELETE" });
     router.push("/campaigns");
+  }
+
+  async function handleDuplicate() {
+    setDuplicating(true);
+    try {
+      const data = await apiFetch<{ campaign: { id: string } }>(`/api/campaigns/${params.id}/duplicate`, {
+        method: "POST",
+      });
+      router.push(`/campaigns/${data.campaign.id}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to duplicate campaign");
+    } finally {
+      setDuplicating(false);
+    }
   }
 
   if (loading) return <div className="p-8 text-gray-500">Loading...</div>;
@@ -94,12 +112,20 @@ export default function CampaignDetailPage() {
         description={`${campaign.device.name} · ${campaign.template.name}`}
         action={
           <div className="flex items-center gap-2">
-            {(campaign.status === "draft" || campaign.status === "stopped") && (
+            {(campaign.status === "draft" || campaign.status === "stopped" || campaign.status === "scheduled") && (
               <button
                 onClick={() => handleAction("start")}
                 className="flex items-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg px-3 py-2 hover:bg-brand-100"
               >
-                <Play size={14} /> Start
+                <Play size={14} /> {campaign.status === "scheduled" ? "Start now" : "Start"}
+              </button>
+            )}
+            {campaign.status === "scheduled" && (
+              <button
+                onClick={() => handleAction("unschedule")}
+                className="flex items-center gap-1.5 text-sm font-medium bg-gray-50 text-gray-600 rounded-lg px-3 py-2 hover:bg-gray-100"
+              >
+                Cancel schedule
               </button>
             )}
             {campaign.status === "running" && (
@@ -126,6 +152,21 @@ export default function CampaignDetailPage() {
                 <Square size={14} /> Stop
               </button>
             )}
+            {(campaign.status === "draft" || campaign.status === "scheduled") && (
+              <Link
+                href={`/campaigns/${campaign.id}/edit`}
+                className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600"
+              >
+                <Pencil size={14} /> Edit
+              </Link>
+            )}
+            <button
+              onClick={handleDuplicate}
+              disabled={duplicating}
+              className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+            >
+              <Copy size={14} /> {duplicating ? "Duplicating…" : "Duplicate"}
+            </button>
             <button
               onClick={handleDelete}
               className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600"
@@ -141,7 +182,7 @@ export default function CampaignDetailPage() {
           <ArrowLeft size={14} /> Back to campaigns
         </Link>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6">
           <div className="flex items-center justify-between mb-3">
             <Badge status={campaign.status} />
             <span className="text-sm text-gray-500">
@@ -151,11 +192,17 @@ export default function CampaignDetailPage() {
           <div className="w-full bg-gray-100 rounded-full h-2.5">
             <div className="bg-brand-600 h-2.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
           </div>
-          <div className="grid grid-cols-3 gap-4 mt-6 text-sm">
+          <div className="grid grid-cols-4 gap-4 mt-6 text-sm">
             <div>
               <p className="text-gray-500">Delay</p>
               <p className="font-medium text-gray-900">
                 {campaign.minDelay}–{campaign.maxDelay}s
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500">Scheduled</p>
+              <p className="font-medium text-gray-900">
+                {campaign.scheduledAt ? new Date(campaign.scheduledAt).toLocaleString() : "—"}
               </p>
             </div>
             <div>
@@ -173,7 +220,7 @@ export default function CampaignDetailPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-900">Recipients (showing latest 200)</h2>
           </div>
@@ -190,8 +237,8 @@ export default function CampaignDetailPage() {
               {campaign.messages.map((m) => (
                 <tr key={m.id} className="hover:bg-gray-50">
                   <td className="px-6 py-3">
-                    <p className="font-medium text-gray-900">{m.contact.name}</p>
-                    <p className="text-gray-500">{m.contact.phone}</p>
+                    <p className="font-medium text-gray-900">{m.contact?.name ?? m.rawName ?? "—"}</p>
+                    <p className="text-gray-500">{m.contact?.phone ?? m.rawPhone ?? ""}</p>
                   </td>
                   <td className="px-6 py-3">
                     <Badge status={m.status} />

@@ -13,7 +13,9 @@ interface LogEntry {
   error: string | null;
   sentAt: string | null;
   createdAt: string;
-  contact: { name: string; phone: string };
+  contact: { name: string; phone: string } | null;
+  rawName: string | null;
+  rawPhone: string | null;
   campaign: { id: string; name: string };
 }
 
@@ -60,13 +62,13 @@ export default function LogsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or phone..."
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
           >
             <option value="all">All statuses</option>
             <option value="queued">Queued</option>
@@ -78,7 +80,7 @@ export default function LogsPage() {
           <span className="text-sm text-gray-500">{total} total</span>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
               <tr>
@@ -100,8 +102,8 @@ export default function LogsPage() {
               {logs.map((log) => (
                 <tr key={log.id} className="hover:bg-gray-50">
                   <td className="px-6 py-3">
-                    <p className="font-medium text-gray-900">{log.contact.name}</p>
-                    <p className="text-gray-500">{log.contact.phone}</p>
+                    <p className="font-medium text-gray-900">{log.contact?.name ?? log.rawName ?? "—"}</p>
+                    <p className="text-gray-500">{log.contact?.phone ?? log.rawPhone ?? ""}</p>
                   </td>
                   <td className="px-6 py-3 text-gray-700">{log.campaign.name}</td>
                   <td className="px-6 py-3">

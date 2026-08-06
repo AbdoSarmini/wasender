@@ -79,7 +79,7 @@ export default function OverviewPage() {
           <StatCard label="Active campaigns" value={stats?.activeCampaigns ?? "—"} icon={Zap} tone="amber" />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-900">Recent campaigns</h2>
             <Link href="/campaigns" className="text-sm text-brand-600 font-medium hover:text-brand-700">

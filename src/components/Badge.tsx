@@ -8,6 +8,7 @@ const STYLES: Record<string, string> = {
   running: "bg-blue-50 text-blue-700 ring-blue-600/20",
   queued: "bg-gray-50 text-gray-600 ring-gray-500/20",
   draft: "bg-gray-50 text-gray-600 ring-gray-500/20",
+  scheduled: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
   sending: "bg-amber-50 text-amber-700 ring-amber-600/20",
   qr: "bg-amber-50 text-amber-700 ring-amber-600/20",
   initializing: "bg-amber-50 text-amber-700 ring-amber-600/20",

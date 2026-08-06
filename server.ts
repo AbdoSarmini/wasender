@@ -1,5 +1,4 @@
 import { createServer } from "http";
-import { parse } from "url";
 import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
@@ -9,7 +8,9 @@ import { Server as IOServer } from "socket.io";
 import { setIO } from "./src/lib/socket";
 import { waManager } from "./src/lib/whatsapp/manager";
 import { campaignRunner } from "./src/lib/campaign/runner";
+import { startScheduler } from "./src/lib/campaign/scheduler";
 import { prisma } from "./src/lib/prisma";
+import { bootstrapAdminUser } from "./src/lib/bootstrap-admin";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -20,8 +21,7 @@ const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
   const server = createServer((req, res) => {
-    const parsedUrl = parse(req.url || "/", true);
-    handle(req, res, parsedUrl);
+    handle(req, res);
   });
 
   const io = new IOServer(server, { path: "/socket.io" });
@@ -39,6 +39,8 @@ app.prepare().then(async () => {
     socket.emit("connected", { ok: true });
   });
 
+  await bootstrapAdminUser();
+
   // A campaign that was mid-run when the process last exited can no longer
   // be actively driven by this (fresh) in-memory runner — surface it as
   // paused so the operator can explicitly resume it.
@@ -46,6 +48,8 @@ app.prepare().then(async () => {
     where: { status: "running" },
     data: { status: "paused" },
   });
+
+  startScheduler();
 
   server.listen(port, hostname, () => {
     // eslint-disable-next-line no-console

@@ -18,7 +18,8 @@ const MIME_TYPES: Record<string, string> = {
   ".txt": "text/plain",
 };
 
-export async function GET(_req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ path: string[] }> }) {
+  const params = await props.params;
   const uploadRoot = path.join(process.cwd(), "uploads");
   const requestedPath = path.join(uploadRoot, ...params.path);
 

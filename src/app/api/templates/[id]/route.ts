@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteUploadedFile, saveUploadedFile } from "@/lib/upload";
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const template = await prisma.template.findUnique({ where: { id: params.id } });
   if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
   return NextResponse.json({ template });
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const existing = await prisma.template.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: "Template not found" }, { status: 404 });
 
@@ -43,7 +45,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ template });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const existing = await prisma.template.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: "Template not found" }, { status: 404 });
 

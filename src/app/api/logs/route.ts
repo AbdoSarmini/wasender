@@ -13,9 +13,11 @@ export async function GET(req: NextRequest) {
   if (status && status !== "all") where.status = status;
   if (campaignId) where.campaignId = campaignId;
   if (search) {
-    where.contact = {
-      OR: [{ name: { contains: search } }, { phone: { contains: search } }],
-    };
+    where.OR = [
+      { contact: { OR: [{ name: { contains: search } }, { phone: { contains: search } }] } },
+      { rawName: { contains: search } },
+      { rawPhone: { contains: search } },
+    ];
   }
 
   const [logs, total] = await Promise.all([

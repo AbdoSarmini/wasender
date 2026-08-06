@@ -16,7 +16,7 @@ interface Template {
   updatedAt: string;
 }
 
-const VARIABLE_HINT = "Use {{name}}, {{phone}} or any custom column from your contacts (e.g. {{company}}).";
+const VARIABLE_HINT = "Use {{name}}, {{phone}} or any custom column from your contacts (e.g. {{company}}). Use {{random}} to insert a random 8-digit number.";
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -124,7 +124,7 @@ export default function TemplatesPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((t) => (
-            <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col">
+            <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-xs p-5 flex flex-col">
               <div className="flex items-start justify-between mb-2">
                 <p className="font-semibold text-gray-900 truncate">{t.name}</p>
                 <div className="flex items-center gap-1 shrink-0">
@@ -156,7 +156,7 @@ export default function TemplatesPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
               placeholder="e.g. Welcome message"
             />
           </div>
@@ -167,7 +167,7 @@ export default function TemplatesPage() {
               onChange={(e) => setContent(e.target.value)}
               required
               rows={5}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
               placeholder={"Hi {{name}}, thanks for..."}
             />
             <p className="text-xs text-gray-400 mt-1">{VARIABLE_HINT}</p>

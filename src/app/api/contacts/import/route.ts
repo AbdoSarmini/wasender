@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
-
-function normalizePhone(raw: string) {
-  return String(raw).replace(/[^\d+]/g, "").replace(/^\+/, "");
-}
-
-function findKey(row: Record<string, string>, patterns: RegExp[]) {
-  return Object.keys(row).find((k) => patterns.some((p) => p.test(k.trim())));
-}
+import { parseContactsCsv } from "@/lib/csv-contacts";
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -21,23 +13,14 @@ export async function POST(req: NextRequest) {
   }
 
   const text = await file.text();
-  const parsed = Papa.parse<Record<string, string>>(text, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (h) => h.trim(),
-  });
-
-  if (parsed.errors?.length) {
-    const fatal = parsed.errors.find((e) => e.type !== "FieldMismatch");
-    if (fatal) {
-      return NextResponse.json({ error: `CSV parse error: ${fatal.message}` }, { status: 400 });
-    }
+  let parsed;
+  try {
+    parsed = parseContactsCsv(text);
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
-
-  const rows = parsed.data.filter((r) => Object.values(r).some((v) => v && v.trim()));
-  if (rows.length === 0) {
-    return NextResponse.json({ error: "No rows found in CSV" }, { status: 400 });
-  }
+  const { rows, errors } = parsed;
+  let skipped = parsed.skipped;
 
   let resolvedGroupId = groupId;
   if (!resolvedGroupId && groupName) {
@@ -49,41 +32,11 @@ export async function POST(req: NextRequest) {
     resolvedGroupId = group.id;
   }
 
-  const phoneKey = findKey(rows[0], [/^phone$/i, /mobile/i, /number/i, /whats.?app/i]);
-  const nameKey = findKey(rows[0], [/^name$/i, /full.?name/i, /contact/i]);
-
-  if (!phoneKey) {
-    return NextResponse.json(
-      { error: "Could not find a phone/mobile/number column in the CSV" },
-      { status: 400 }
-    );
-  }
-
   let created = 0;
   let updated = 0;
-  let skipped = 0;
-  const errors: string[] = [];
 
   for (const row of rows) {
-    const phoneRaw = row[phoneKey];
-    if (!phoneRaw) {
-      skipped++;
-      continue;
-    }
-    const phone = normalizePhone(phoneRaw);
-    if (phone.length < 6) {
-      skipped++;
-      errors.push(`Invalid phone: ${phoneRaw}`);
-      continue;
-    }
-    const name = (nameKey ? row[nameKey] : "")?.trim() || phone;
-
-    const extra: Record<string, string> = {};
-    for (const key of Object.keys(row)) {
-      if (key === phoneKey || key === nameKey) continue;
-      if (row[key]) extra[key] = row[key];
-    }
-    const fields = Object.keys(extra).length ? JSON.stringify(extra) : null;
+    const { phone, name, fields } = row;
 
     const existing = await prisma.contact.findUnique({ where: { phone } });
     if (existing) {
@@ -108,7 +61,7 @@ export async function POST(req: NextRequest) {
     created,
     updated,
     skipped,
-    total: rows.length,
-    errors: errors.slice(0, 20),
+    total: rows.length + skipped,
+    errors,
   });
 }

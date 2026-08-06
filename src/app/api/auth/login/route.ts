@@ -10,11 +10,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
-  if (!validateCredentials(email, password)) {
+  const user = await validateCredentials(email, password);
+  if (!user) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
-  const token = await createSessionToken(email);
+  const token = await createSessionToken(user);
   await setSessionCookie(token);
 
   return NextResponse.json({ ok: true });

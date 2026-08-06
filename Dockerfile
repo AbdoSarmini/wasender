@@ -1,13 +1,18 @@
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 # Chromium for whatsapp-web.js (Puppeteer). Installing the distro package
 # instead of letting Puppeteer download its own keeps the image smaller and
 # avoids Puppeteer's Chromium download flakiness in some network setups.
+# python3/make/g++ are a fallback build toolchain for better-sqlite3 (the
+# Prisma SQLite driver adapter) in case no prebuilt binary matches the image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
     ca-certificates \
     openssl \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true \

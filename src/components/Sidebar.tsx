@@ -10,6 +10,7 @@ import {
   ScrollText,
   Smartphone,
   LogOut,
+  UserCog,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -22,9 +23,13 @@ const NAV_ITEMS = [
   { href: "/devices", label: "Devices", icon: Smartphone },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const navItems = isAdmin
+    ? [...NAV_ITEMS, { href: "/users", label: "Users", icon: UserCog }]
+    : NAV_ITEMS;
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -42,7 +47,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (

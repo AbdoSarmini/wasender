@@ -20,7 +20,7 @@ export default function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4 shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4 shadow-xs">
       <div className={clsx("w-11 h-11 rounded-xl flex items-center justify-center shrink-0", toneStyles[tone])}>
         <Icon size={20} />
       </div>

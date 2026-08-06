@@ -129,7 +129,7 @@ export default function DevicesPage() {
             const status = effectiveStatus(d);
             const isConnecting = status === "initializing" || status === "qr" || status === "authenticated";
             return (
-              <div key={d.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div key={d.id} className="bg-white rounded-2xl border border-gray-100 shadow-xs p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
@@ -200,7 +200,7 @@ export default function DevicesPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. Sales Line"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <button

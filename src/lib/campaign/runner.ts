@@ -5,15 +5,21 @@ import { waManager } from "@/lib/whatsapp/manager";
 
 type ControlFlag = "running" | "paused" | "stopped";
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function randomDelayMs(minSec: number, maxSec: number) {
   const lo = Math.min(minSec, maxSec);
   const hi = Math.max(minSec, maxSec);
   const seconds = lo + Math.random() * (hi - lo);
   return Math.round(seconds * 1000);
+}
+
+const RANDOM_CHARS = "0123456789";
+
+function randomString(length: number) {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += RANDOM_CHARS[Math.floor(Math.random() * RANDOM_CHARS.length)];
+  }
+  return out;
 }
 
 export function renderTemplate(content: string, contact: { name: string; phone: string; fields?: string | null }) {
@@ -27,6 +33,7 @@ export function renderTemplate(content: string, contact: { name: string; phone: 
   }
   const vars: Record<string, string> = { name: contact.name, phone: contact.phone, ...extra };
   return content.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (match, key) => {
+    if (key === "random") return randomString(8);
     return Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : match;
   });
 }
@@ -34,9 +41,29 @@ export function renderTemplate(content: string, contact: { name: string; phone: 
 class CampaignRunner extends EventEmitter {
   private control = new Map<string, ControlFlag>();
   private active = new Set<string>();
+  private wakers = new Map<string, () => void>();
 
   private emitProgress(campaignId: string, payload: Record<string, unknown>) {
     this.emit("progress", campaignId, payload);
+  }
+
+  private interruptibleSleep(campaignId: string, ms: number) {
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        this.wakers.delete(campaignId);
+        resolve();
+      }, ms);
+      this.wakers.set(campaignId, () => {
+        clearTimeout(timer);
+        this.wakers.delete(campaignId);
+        resolve();
+      });
+    });
+  }
+
+  private wake(campaignId: string) {
+    const waker = this.wakers.get(campaignId);
+    if (waker) waker();
   }
 
   isActive(campaignId: string) {
@@ -79,6 +106,7 @@ class CampaignRunner extends EventEmitter {
   pause(campaignId: string) {
     if (this.control.get(campaignId) === "running") {
       this.control.set(campaignId, "paused");
+      this.wake(campaignId);
     }
   }
 
@@ -95,6 +123,7 @@ class CampaignRunner extends EventEmitter {
 
   stop(campaignId: string) {
     this.control.set(campaignId, "stopped");
+    this.wake(campaignId);
   }
 
   private async runLoop(campaignId: string) {
@@ -107,14 +136,14 @@ class CampaignRunner extends EventEmitter {
       const flag = this.control.get(campaignId);
       if (flag === "stopped") break;
       if (flag === "paused") {
-        await sleep(1000);
+        await this.interruptibleSleep(campaignId, 1000);
         continue;
       }
 
       const nextMessage = await prisma.campaignMessage.findFirst({
         where: { campaignId, status: "queued" },
         include: { contact: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ sequence: "asc" }, { createdAt: "asc" }],
       });
 
       if (!nextMessage) {
@@ -130,19 +159,25 @@ class CampaignRunner extends EventEmitter {
         break;
       }
 
+      const recipient = nextMessage.contact ?? {
+        name: nextMessage.rawName || nextMessage.rawPhone || "",
+        phone: nextMessage.rawPhone ?? "",
+        fields: nextMessage.rawFields,
+      };
+
       await prisma.campaignMessage.update({
         where: { id: nextMessage.id },
         data: { status: "sending" },
       });
 
       try {
-        const text = renderTemplate(campaign.template.content, nextMessage.contact);
-        const chatId = waManager.toChatId(nextMessage.contact.phone);
+        const text = renderTemplate(campaign.template.content, recipient);
+        const chatId = waManager.toChatId(recipient.phone);
 
         if (campaign.template.mediaPath) {
           const filePath = path.isAbsolute(campaign.template.mediaPath)
             ? campaign.template.mediaPath
-            : path.join(process.cwd(), campaign.template.mediaPath);
+            : path.join(/* turbopackIgnore: true */ process.cwd(), campaign.template.mediaPath);
           await waManager.sendMedia(
             campaign.deviceId,
             chatId,
@@ -166,7 +201,7 @@ class CampaignRunner extends EventEmitter {
           status: "running",
           sentCount: updated.sentCount,
           failedCount: updated.failedCount,
-          lastContact: nextMessage.contact.name,
+          lastContact: recipient.name,
           lastStatus: "sent",
         });
       } catch (err) {
@@ -182,7 +217,7 @@ class CampaignRunner extends EventEmitter {
           status: "running",
           sentCount: updated.sentCount,
           failedCount: updated.failedCount,
-          lastContact: nextMessage.contact.name,
+          lastContact: recipient.name,
           lastStatus: "failed",
           lastError: (err as Error).message,
         });
@@ -193,7 +228,7 @@ class CampaignRunner extends EventEmitter {
       });
       if (remaining === 0) continue;
 
-      await sleep(randomDelayMs(campaign.minDelay, campaign.maxDelay));
+      await this.interruptibleSleep(campaignId, randomDelayMs(campaign.minDelay, campaign.maxDelay));
     }
 
     const flagAtExit = this.control.get(campaignId);
@@ -204,9 +239,9 @@ class CampaignRunner extends EventEmitter {
       });
       await prisma.campaign.update({
         where: { id: campaignId },
-        data: { status: "stopped", completedAt: new Date() },
+        data: { status: "completed", completedAt: new Date() },
       });
-      this.emitProgress(campaignId, { status: "stopped" });
+      this.emitProgress(campaignId, { status: "completed" });
     }
   }
 }

@@ -4,7 +4,17 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("user") // admin | user
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
 }
 
 model Device {
@@ -65,7 +75,7 @@ model Contact {
 model Campaign {
   id          String    @id @default(cuid())
   name        String
-  status      String    @default("draft") // draft | queued | running | paused | completed | stopped | failed
+  status      String    @default("draft") // draft | scheduled | queued | running | paused | completed | stopped | failed
   deviceId    String
   device      Device    @relation(fields: [deviceId], references: [id])
   templateId  String
@@ -77,6 +87,7 @@ model Campaign {
   sentCount   Int       @default(0)
   failedCount Int       @default(0)
   createdAt   DateTime  @default(now())
+  scheduledAt DateTime? // UTC instant the campaign should auto-start at
   startedAt   DateTime?
   completedAt DateTime?
 
@@ -101,12 +112,17 @@ model CampaignMessage {
   id         String    @id @default(cuid())
   campaignId String
   campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  contactId  String
-  contact    Contact   @relation(fields: [contactId], references: [id])
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  // Ad-hoc recipient data (CSV rows not saved to Contacts). Set when contactId is null.
+  rawName    String?
+  rawPhone   String?
+  rawFields  String? // JSON string of custom fields
   status     String    @default("queued") // queued | sending | sent | failed | skipped
   error      String?
   sentAt     DateTime?
   createdAt  DateTime  @default(now())
+  sequence   Int       @default(0) // preserves audience/CSV upload order for sending
 
   @@map("campaign_messages")
 }
