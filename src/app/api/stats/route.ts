@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { waManager } from "@/lib/whatsapp/manager";
 
+// GET-only route with no dynamic segments would otherwise be statically
+// prerendered at build time, executing a DB query before DATABASE_URL is
+// necessarily available (e.g. a fresh clone or Docker build with no .env yet).
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);

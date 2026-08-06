@@ -1,0 +1,24 @@
+services:
+  wasender:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "file:/app/data/dev.db"
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      PORT: 3000
+      DEVICE_LIMIT: ${DEVICE_LIMIT:-5}
+    volumes:
+      - wasender_data:/app/data
+      - wasender_uploads:/app/uploads
+      - wasender_wwebjs_auth:/app/.wwebjs_auth
+      - wasender_wwebjs_cache:/app/.wwebjs_cache
+
+volumes:
+  wasender_data:
+  wasender_uploads:
+  wasender_wwebjs_auth:
+  wasender_wwebjs_cache:

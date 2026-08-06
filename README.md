@@ -95,6 +95,46 @@ Session files for linked WhatsApp devices live in `.wwebjs_auth/` and
 uploaded template media in `uploads/` — both are gitignored; back them up if
 you care about not having to re-scan QR codes after a redeploy.
 
+### Deploying with Docker / Dokploy
+
+The repo includes a `Dockerfile` (Debian slim + a system Chromium for
+whatsapp-web.js, so no Puppeteer download needed) and a `docker-compose.yml`
+with named volumes for everything that must survive a redeploy: the SQLite
+database, uploaded template media, and linked-device sessions.
+
+**In Dokploy:**
+
+1. Create a new application from this Git repository, build type **Dockerfile**
+   (Dokploy will find it at the repo root — no Nixpacks needed).
+2. Under **Environment**, set:
+   ```
+   DATABASE_URL=file:/app/data/dev.db
+   ADMIN_EMAIL=you@yourdomain.com
+   ADMIN_PASSWORD=a-real-password
+   SESSION_SECRET=a-long-random-string
+   PORT=3000
+   ```
+3. Under **Mounts/Volumes**, add persistent volumes for these container paths
+   (Dokploy provisions the backing storage):
+   - `/app/data` (the SQLite DB)
+   - `/app/uploads` (template attachments)
+   - `/app/.wwebjs_auth` (linked WhatsApp sessions — losing this means
+     re-scanning every QR code)
+   - `/app/.wwebjs_cache`
+4. Set the exposed port to `3000` and attach your domain (Dokploy handles the
+   Traefik + Let's Encrypt HTTPS for you).
+5. Deploy. The container runs `prisma migrate deploy` automatically on
+   startup (see `docker-entrypoint.sh`) before starting the server, so the
+   first boot creates the schema.
+6. Once it's live at your domain, log in and go to **Devices → Add device**
+   to scan the QR code for real — this only works on a host with normal
+   outbound internet access to `web.whatsapp.com`.
+
+If you'd rather deploy via Dokploy's **Docker Compose** application type
+instead, point it at `docker-compose.yml` — it defines the same four
+volumes as named volumes, and reads `ADMIN_EMAIL` / `ADMIN_PASSWORD` /
+`SESSION_SECRET` / `DEVICE_LIMIT` from the environment Dokploy injects.
+
 ### Environment variables
 
 | Variable          | Purpose                                             |

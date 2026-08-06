@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+.env
+.env.local
+.git
+.wwebjs_auth
+.wwebjs_cache
+uploads
+data
+*.db
+*.db-journal
+*.log
+.DS_Store
