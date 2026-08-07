@@ -144,7 +144,7 @@ volumes as named volumes, and reads `ADMIN_EMAIL` / `ADMIN_PASSWORD` /
 | `ADMIN_PASSWORD`   | Login password (plaintext env var — fine for a self-hosted single-operator tool; see `ADMIN_PASSWORD_HASH` below for a hashed alternative) |
 | `ADMIN_PASSWORD_HASH` | Optional bcrypt hash to use instead of `ADMIN_PASSWORD` |
 | `SESSION_SECRET`   | Secret used to sign the session JWT                   |
-| `PORT` / `HOSTNAME`| Server bind address (default `0.0.0.0:3000`)          |
+| `PORT` / `HOST`    | Server bind address (default `0.0.0.0:3000`)          |
 | `DEVICE_LIMIT`     | Max number of WhatsApp devices (default `5`)          |
 | `CHROME_PATH`      | Optional path to a system Chrome/Chromium binary for whatsapp-web.js to launch, instead of the one Puppeteer downloads |
 

@@ -14,7 +14,10 @@ import { bootstrapAdminUser } from "./src/lib/bootstrap-admin";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
-const hostname = process.env.HOSTNAME || "0.0.0.0";
+// Bind to all interfaces by default. Docker sets HOSTNAME to the container ID
+// for every container, so it can't be used to detect an intentional override —
+// use HOST instead if you need to bind to a specific address.
+const hostname = process.env.HOST || "0.0.0.0";
 
 const app = next({ dev });
 const handle = app.getRequestHandler();
