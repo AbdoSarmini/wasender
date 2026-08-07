@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     CHROME_PATH=/usr/bin/chromium \
-    NODE_ENV=production \
     DATABASE_URL="file:/app/data/dev.db"
 
 WORKDIR /app
