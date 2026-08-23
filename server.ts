@@ -9,6 +9,7 @@ import { setIO } from "./src/lib/socket";
 import { waManager } from "./src/lib/whatsapp/manager";
 import { campaignRunner } from "./src/lib/campaign/runner";
 import { startScheduler } from "./src/lib/campaign/scheduler";
+import { scraperRunner } from "./src/lib/scraper/runner";
 import { prisma } from "./src/lib/prisma";
 import { bootstrapAdminUser } from "./src/lib/bootstrap-admin";
 
@@ -38,6 +39,10 @@ app.prepare().then(async () => {
     io.emit("campaign:progress", { campaignId, ...payload });
   });
 
+  scraperRunner.on("progress", (jobId: string, payload: Record<string, unknown>) => {
+    io.emit("scrape:progress", { jobId, ...payload });
+  });
+
   io.on("connection", (socket) => {
     socket.emit("connected", { ok: true });
   });
@@ -50,6 +55,14 @@ app.prepare().then(async () => {
   await prisma.campaign.updateMany({
     where: { status: "running" },
     data: { status: "paused" },
+  });
+
+  // A scrape job that was mid-run when the process last exited can no longer
+  // be actively driven by this (fresh) in-memory runner — surface it as
+  // stopped so the operator can restart it explicitly.
+  await prisma.scrapeJob.updateMany({
+    where: { status: { in: ["queued", "running"] } },
+    data: { status: "stopped", completedAt: new Date() },
   });
 
   startScheduler();

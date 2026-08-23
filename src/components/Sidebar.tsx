@@ -11,6 +11,7 @@ import {
   Smartphone,
   LogOut,
   UserCog,
+  MapPin,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/campaigns", label: "Campaigns", icon: MessageSquare },
   { href: "/templates", label: "Templates", icon: FileText },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/scraper", label: "Scraper", icon: MapPin },
   { href: "/logs", label: "Logs", icon: ScrollText },
   { href: "/devices", label: "Devices", icon: Smartphone },
 ];

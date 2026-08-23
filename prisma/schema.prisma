@@ -108,6 +108,43 @@ model CampaignGroup {
   @@map("campaign_groups")
 }
 
+model ScrapeJob {
+  id          String    @id @default(cuid())
+  query       String
+  location    String
+  maxResults  Int       @default(60)
+  status      String    @default("queued") // queued | running | completed | stopped | failed
+  resultCount Int       @default(0)
+  error       String?
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  results ScrapeResult[]
+
+  @@map("scrape_jobs")
+}
+
+model ScrapeResult {
+  id            String    @id @default(cuid())
+  scrapeJobId   String
+  scrapeJob     ScrapeJob @relation(fields: [scrapeJobId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String?
+  address       String?
+  category      String?
+  website       String?
+  rating        Float?
+  reviewCount   Int?
+  googleMapsUrl String?
+  latitude      Float?
+  longitude     Float?
+  scrapedAt     DateTime  @default(now())
+
+  @@unique([scrapeJobId, googleMapsUrl])
+  @@map("scrape_results")
+}
+
 model CampaignMessage {
   id         String    @id @default(cuid())
   campaignId String
