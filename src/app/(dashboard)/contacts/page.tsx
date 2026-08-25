@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useI18n } from "@/lib/i18n/context";
 import { Plus, Upload, Download, Users, Trash2, Search, Loader2 } from "lucide-react";
 
 interface Group {
@@ -21,6 +22,7 @@ interface Contact {
 }
 
 export default function ContactsPage() {
+  const { t } = useI18n();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [total, setTotal] = useState(0);
@@ -87,7 +89,7 @@ export default function ContactsPage() {
       loadContacts();
       loadGroups();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to add contact");
+      setError(err instanceof ApiError ? err.message : t.contacts.addFailed);
     } finally {
       setSaving(false);
     }
@@ -113,7 +115,7 @@ export default function ContactsPage() {
       loadContacts();
       loadGroups();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Import failed");
+      setError(err instanceof ApiError ? err.message : t.contacts.importFailed);
     } finally {
       setImporting(false);
     }
@@ -128,14 +130,14 @@ export default function ContactsPage() {
   }
 
   async function handleDeleteGroup(id: string) {
-    if (!confirm("Delete this group? Contacts will be kept but ungrouped.")) return;
+    if (!confirm(t.contacts.deleteGroupConfirm)) return;
     await apiFetch(`/api/groups/${id}`, { method: "DELETE" });
     loadGroups();
     loadContacts();
   }
 
   async function handleDeleteContact(id: string) {
-    if (!confirm("Delete this contact?")) return;
+    if (!confirm(t.contacts.deleteContactConfirm)) return;
     await apiFetch(`/api/contacts/${id}`, { method: "DELETE" });
     loadContacts();
   }
@@ -154,33 +156,33 @@ export default function ContactsPage() {
   return (
     <div>
       <PageHeader
-        title="Contacts"
-        description="Manage your audience and organize contacts into groups."
+        title={t.contacts.title}
+        description={t.contacts.description}
         action={
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowGroupModal(true)}
               className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-gray-50"
             >
-              <Users size={16} /> Groups
+              <Users size={16} /> {t.contacts.groups}
             </button>
             <button
               onClick={() => setShowImport(true)}
               className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-gray-50"
             >
-              <Upload size={16} /> Import CSV
+              <Upload size={16} /> {t.contacts.importCsv}
             </button>
             <button
               onClick={handleDownloadSample}
               className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-gray-50"
             >
-              <Download size={16} /> Sample CSV
+              <Download size={16} /> {t.contacts.sampleCsv}
             </button>
             <button
               onClick={() => setShowAdd(true)}
               className="flex items-center gap-2 bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-700"
             >
-              <Plus size={16} /> Add contact
+              <Plus size={16} /> {t.contacts.addContact}
             </button>
           </div>
         }
@@ -193,7 +195,7 @@ export default function ContactsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or phone..."
+              placeholder={t.contacts.searchPlaceholder}
               className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
@@ -202,32 +204,32 @@ export default function ContactsPage() {
             onChange={(e) => setGroupFilter(e.target.value)}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
           >
-            <option value="all">All groups</option>
-            <option value="none">Ungrouped</option>
+            <option value="all">{t.contacts.allGroups}</option>
+            <option value="none">{t.contacts.ungrouped}</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name} ({g._count.contacts})
               </option>
             ))}
           </select>
-          <span className="text-sm text-gray-500">{total} contacts</span>
+          <span className="text-sm text-gray-500">{t.contacts.totalContacts(total)}</span>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
               <tr>
-                <th className="text-left px-6 py-3 font-medium">Name</th>
-                <th className="text-left px-6 py-3 font-medium">Phone</th>
-                <th className="text-left px-6 py-3 font-medium">Group</th>
-                <th className="text-right px-6 py-3 font-medium">Actions</th>
+                <th className="text-left px-6 py-3 font-medium">{t.contacts.name}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.contacts.phone}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.contacts.group}</th>
+                <th className="text-right px-6 py-3 font-medium">{t.contacts.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {!loading && contacts.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-10 text-center text-gray-500">
-                    No contacts found.
+                    {t.contacts.noContactsFound}
                   </td>
                 </tr>
               )}
@@ -248,11 +250,11 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add contact">
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title={t.contacts.addContactTitle}>
         <form onSubmit={handleAddContact} className="space-y-4">
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.contacts.name}</label>
             <input
               value={addName}
               onChange={(e) => setAddName(e.target.value)}
@@ -261,23 +263,23 @@ export default function ContactsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone (with country code)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.contacts.phoneWithCode}</label>
             <input
               value={addPhone}
               onChange={(e) => setAddPhone(e.target.value)}
               required
-              placeholder="e.g. 15551234567"
+              placeholder={t.contacts.phonePlaceholder}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Group (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.contacts.groupOptional}</label>
             <select
               value={addGroupId}
               onChange={(e) => setAddGroupId(e.target.value)}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             >
-              <option value="">No group</option>
+              <option value="">{t.common.noGroup}</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
@@ -291,21 +293,21 @@ export default function ContactsPage() {
             className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-700 disabled:opacity-60"
           >
             {saving && <Loader2 className="animate-spin" size={16} />}
-            Add contact
+            {t.contacts.addContact}
           </button>
         </form>
       </Modal>
 
-      <Modal open={showImport} onClose={() => setShowImport(false)} title="Import contacts from CSV">
+      <Modal open={showImport} onClose={() => setShowImport(false)} title={t.contacts.importTitle}>
         <form onSubmit={handleImport} className="space-y-4">
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
           {importResult && (
             <div className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
-              Imported: {importResult.created} created, {importResult.updated} updated, {importResult.skipped} skipped.
+              {t.contacts.importedSummary(importResult.created, importResult.updated, importResult.skipped)}
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CSV file</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.contacts.csvFile}</label>
             <input
               type="file"
               accept=".csv"
@@ -313,13 +315,10 @@ export default function ContactsPage() {
               onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-700 file:text-sm file:font-medium"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Needs a phone/mobile/number column and ideally a name column. Any other columns become
-              personalization variables.
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{t.contacts.csvFileHint}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Assign to existing group</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.contacts.assignExistingGroup}</label>
             <select
               value={importGroupChoice}
               onChange={(e) => {
@@ -328,7 +327,7 @@ export default function ContactsPage() {
               }}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             >
-              <option value="">No group</option>
+              <option value="">{t.common.noGroup}</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
@@ -337,11 +336,11 @@ export default function ContactsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Or create a new group</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.contacts.orCreateNewGroup}</label>
             <input
               value={importNewGroup}
               onChange={(e) => setImportNewGroup(e.target.value)}
-              placeholder="e.g. Newsletter subscribers"
+              placeholder={t.contacts.newGroupPlaceholder}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
@@ -351,31 +350,31 @@ export default function ContactsPage() {
             className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-700 disabled:opacity-60"
           >
             {importing && <Loader2 className="animate-spin" size={16} />}
-            Import
+            {t.contacts.import}
           </button>
         </form>
       </Modal>
 
-      <Modal open={showGroupModal} onClose={() => setShowGroupModal(false)} title="Manage groups">
+      <Modal open={showGroupModal} onClose={() => setShowGroupModal(false)} title={t.contacts.manageGroups}>
         <div className="space-y-4">
           <form onSubmit={handleCreateGroup} className="flex gap-2">
             <input
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="New group name"
+              placeholder={t.contacts.newGroupName}
               className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
             <button type="submit" className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700">
-              Add
+              {t.common.add}
             </button>
           </form>
           <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg">
-            {groups.length === 0 && <p className="px-4 py-6 text-sm text-gray-500 text-center">No groups yet.</p>}
+            {groups.length === 0 && <p className="px-4 py-6 text-sm text-gray-500 text-center">{t.contacts.noGroupsYet}</p>}
             {groups.map((g) => (
               <div key={g.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="font-medium text-gray-900 text-sm">{g.name}</p>
-                  <p className="text-xs text-gray-500">{g._count.contacts} contacts</p>
+                  <p className="text-xs text-gray-500">{t.campaignForm.contactsCount(g._count.contacts)}</p>
                 </div>
                 <button onClick={() => handleDeleteGroup(g.id)} className="text-gray-400 hover:text-red-600">
                   <Trash2 size={14} />

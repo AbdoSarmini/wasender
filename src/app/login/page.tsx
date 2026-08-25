@@ -3,10 +3,12 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare, Loader2 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/context";
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ function LoginForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Login failed");
+        setError(data.error || t.login.loginFailed);
         setLoading(false);
         return;
       }
@@ -32,7 +34,7 @@ function LoginForm() {
       router.push(next);
       router.refresh();
     } catch {
-      setError("Something went wrong. Try again.");
+      setError(t.login.somethingWrong);
       setLoading(false);
     }
   }
@@ -45,7 +47,7 @@ function LoginForm() {
             <MessageSquare className="text-white" size={28} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">WaSender</h1>
-          <p className="text-gray-500 text-sm mt-1">Sign in to your dashboard</p>
+          <p className="text-gray-500 text-sm mt-1">{t.login.signInToDashboard}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-6 space-y-4 border border-gray-100">
@@ -55,7 +57,7 @@ function LoginForm() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.email}</label>
             <input
               type="email"
               required
@@ -66,7 +68,7 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.password}</label>
             <input
               type="password"
               required
@@ -82,7 +84,7 @@ function LoginForm() {
             className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-600 text-white py-2.5 text-sm font-semibold hover:bg-brand-700 transition disabled:opacity-60"
           >
             {loading && <Loader2 className="animate-spin" size={16} />}
-            Sign in
+            {t.login.signIn}
           </button>
         </form>
       </div>

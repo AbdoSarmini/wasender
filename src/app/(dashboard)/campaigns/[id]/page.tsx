@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
+import { useI18n } from "@/lib/i18n/context";
 import { Play, Pause, Square, Trash2, ArrowLeft, Copy, Pencil } from "lucide-react";
 import Link from "next/link";
 
@@ -40,6 +41,7 @@ interface CampaignDetail {
 export default function CampaignDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
@@ -73,12 +75,12 @@ export default function CampaignDetailPage() {
       await apiFetch(`/api/campaigns/${params.id}/${action}`, { method: "POST" });
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Action failed");
+      alert(err instanceof Error ? err.message : t.campaigns.actionFailed);
     }
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this campaign and its logs?")) return;
+    if (!confirm(t.campaignDetail.deleteConfirm)) return;
     await apiFetch(`/api/campaigns/${params.id}`, { method: "DELETE" });
     router.push("/campaigns");
   }
@@ -91,14 +93,14 @@ export default function CampaignDetailPage() {
       });
       router.push(`/campaigns/${data.campaign.id}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to duplicate campaign");
+      alert(err instanceof Error ? err.message : t.campaigns.duplicateFailed);
     } finally {
       setDuplicating(false);
     }
   }
 
-  if (loading) return <div className="p-8 text-gray-500">Loading...</div>;
-  if (!campaign) return <div className="p-8 text-gray-500">Campaign not found.</div>;
+  if (loading) return <div className="p-8 text-gray-500">{t.campaignDetail.loading}</div>;
+  if (!campaign) return <div className="p-8 text-gray-500">{t.campaignDetail.notFound}</div>;
 
   const progress =
     campaign.totalCount > 0
@@ -117,7 +119,7 @@ export default function CampaignDetailPage() {
                 onClick={() => handleAction("start")}
                 className="flex items-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg px-3 py-2 hover:bg-brand-100"
               >
-                <Play size={14} /> {campaign.status === "scheduled" ? "Start now" : "Start"}
+                <Play size={14} /> {campaign.status === "scheduled" ? t.campaigns.startNow : t.campaigns.start}
               </button>
             )}
             {campaign.status === "scheduled" && (
@@ -125,7 +127,7 @@ export default function CampaignDetailPage() {
                 onClick={() => handleAction("unschedule")}
                 className="flex items-center gap-1.5 text-sm font-medium bg-gray-50 text-gray-600 rounded-lg px-3 py-2 hover:bg-gray-100"
               >
-                Cancel schedule
+                {t.campaigns.cancelSchedule}
               </button>
             )}
             {campaign.status === "running" && (
@@ -133,7 +135,7 @@ export default function CampaignDetailPage() {
                 onClick={() => handleAction("pause")}
                 className="flex items-center gap-1.5 text-sm font-medium bg-amber-50 text-amber-700 rounded-lg px-3 py-2 hover:bg-amber-100"
               >
-                <Pause size={14} /> Pause
+                <Pause size={14} /> {t.campaigns.pause}
               </button>
             )}
             {campaign.status === "paused" && (
@@ -141,7 +143,7 @@ export default function CampaignDetailPage() {
                 onClick={() => handleAction("resume")}
                 className="flex items-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg px-3 py-2 hover:bg-brand-100"
               >
-                <Play size={14} /> Resume
+                <Play size={14} /> {t.campaigns.resume}
               </button>
             )}
             {(campaign.status === "running" || campaign.status === "paused") && (
@@ -149,7 +151,7 @@ export default function CampaignDetailPage() {
                 onClick={() => handleAction("stop")}
                 className="flex items-center gap-1.5 text-sm font-medium bg-red-50 text-red-700 rounded-lg px-3 py-2 hover:bg-red-100"
               >
-                <Square size={14} /> Stop
+                <Square size={14} /> {t.campaigns.stop}
               </button>
             )}
             {(campaign.status === "draft" || campaign.status === "scheduled") && (
@@ -157,7 +159,7 @@ export default function CampaignDetailPage() {
                 href={`/campaigns/${campaign.id}/edit`}
                 className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600"
               >
-                <Pencil size={14} /> Edit
+                <Pencil size={14} /> {t.campaignDetail.editCampaign}
               </Link>
             )}
             <button
@@ -165,7 +167,7 @@ export default function CampaignDetailPage() {
               disabled={duplicating}
               className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50"
             >
-              <Copy size={14} /> {duplicating ? "Duplicating…" : "Duplicate"}
+              <Copy size={14} /> {duplicating ? t.campaigns.duplicating : t.campaigns.duplicate}
             </button>
             <button
               onClick={handleDelete}
@@ -179,14 +181,14 @@ export default function CampaignDetailPage() {
 
       <div className="p-8 space-y-6">
         <Link href="/campaigns" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
-          <ArrowLeft size={14} /> Back to campaigns
+          <ArrowLeft size={14} className="rtl:rotate-180" /> {t.campaignDetail.backToCampaigns}
         </Link>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6">
           <div className="flex items-center justify-between mb-3">
             <Badge status={campaign.status} />
             <span className="text-sm text-gray-500">
-              {campaign.sentCount} sent · {campaign.failedCount} failed · {campaign.totalCount} total
+              {t.campaignDetail.sentFailedTotal(campaign.sentCount, campaign.failedCount, campaign.totalCount)}
             </span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2.5">
@@ -194,25 +196,25 @@ export default function CampaignDetailPage() {
           </div>
           <div className="grid grid-cols-4 gap-4 mt-6 text-sm">
             <div>
-              <p className="text-gray-500">Delay</p>
+              <p className="text-gray-500">{t.campaignDetail.delay}</p>
               <p className="font-medium text-gray-900">
                 {campaign.minDelay}–{campaign.maxDelay}s
               </p>
             </div>
             <div>
-              <p className="text-gray-500">Scheduled</p>
+              <p className="text-gray-500">{t.campaignDetail.scheduled}</p>
               <p className="font-medium text-gray-900">
                 {campaign.scheduledAt ? new Date(campaign.scheduledAt).toLocaleString() : "—"}
               </p>
             </div>
             <div>
-              <p className="text-gray-500">Started</p>
+              <p className="text-gray-500">{t.campaignDetail.started}</p>
               <p className="font-medium text-gray-900">
                 {campaign.startedAt ? new Date(campaign.startedAt).toLocaleString() : "—"}
               </p>
             </div>
             <div>
-              <p className="text-gray-500">Completed</p>
+              <p className="text-gray-500">{t.campaignDetail.completed}</p>
               <p className="font-medium text-gray-900">
                 {campaign.completedAt ? new Date(campaign.completedAt).toLocaleString() : "—"}
               </p>
@@ -222,15 +224,15 @@ export default function CampaignDetailPage() {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Recipients (showing latest 200)</h2>
+            <h2 className="font-semibold text-gray-900">{t.campaignDetail.recipientsShowing}</h2>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
               <tr>
-                <th className="text-left px-6 py-3 font-medium">Contact</th>
-                <th className="text-left px-6 py-3 font-medium">Status</th>
-                <th className="text-left px-6 py-3 font-medium">Detail</th>
-                <th className="text-left px-6 py-3 font-medium">Sent at</th>
+                <th className="text-left px-6 py-3 font-medium">{t.campaignDetail.contact}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.campaignDetail.status}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.campaignDetail.detail}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.campaignDetail.sentAt}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

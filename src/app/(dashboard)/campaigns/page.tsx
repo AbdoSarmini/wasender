@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
+import { useI18n } from "@/lib/i18n/context";
 import { Plus, MessageSquare, Play, Pause, Square, Copy } from "lucide-react";
 
 interface Campaign {
@@ -24,6 +25,7 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export default function CampaignsPage() {
       });
       router.push(`/campaigns/${data.campaign.id}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to duplicate campaign");
+      alert(err instanceof Error ? err.message : t.campaigns.duplicateFailed);
     } finally {
       setDuplicatingId(null);
     }
@@ -69,14 +71,14 @@ export default function CampaignsPage() {
   return (
     <div>
       <PageHeader
-        title="Campaigns"
-        description="Create and manage your WhatsApp bulk campaigns."
+        title={t.campaigns.title}
+        description={t.campaigns.description}
         action={
           <Link
             href="/campaigns/new"
             className="flex items-center gap-2 bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-700 transition"
           >
-            <Plus size={16} /> New campaign
+            <Plus size={16} /> {t.campaigns.newCampaign}
           </Link>
         }
       />
@@ -85,9 +87,9 @@ export default function CampaignsPage() {
         {!loading && campaigns.length === 0 && (
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
             <MessageSquare className="mx-auto text-gray-300" size={40} />
-            <p className="mt-3 text-gray-500">No campaigns yet.</p>
+            <p className="mt-3 text-gray-500">{t.campaigns.noCampaignsYet}</p>
             <Link href="/campaigns/new" className="mt-4 inline-block text-brand-600 font-medium text-sm hover:text-brand-700">
-              Create your first campaign
+              {t.campaigns.createFirstCampaign}
             </Link>
           </div>
         )}
@@ -104,10 +106,10 @@ export default function CampaignsPage() {
                       <Badge status={c.status} />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {c.device.name} · {c.template.name} · {c.sentCount}/{c.totalCount} sent
-                      {c.failedCount > 0 ? `, ${c.failedCount} failed` : ""}
+                      {c.device.name} · {c.template.name} · {t.campaigns.sentOf(c.sentCount, c.totalCount)}
+                      {c.failedCount > 0 ? t.campaigns.failedSuffix(c.failedCount) : ""}
                       {c.status === "scheduled" && c.scheduledAt
-                        ? ` · Scheduled for ${new Date(c.scheduledAt).toLocaleString()}`
+                        ? t.campaigns.scheduledFor(new Date(c.scheduledAt).toLocaleString())
                         : ""}
                     </p>
                     <div className="mt-3 w-full bg-gray-100 rounded-full h-2 max-w-md">
@@ -123,7 +125,7 @@ export default function CampaignsPage() {
                         onClick={() => handleAction(c.id, "start")}
                         className="flex items-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg px-3 py-2 hover:bg-brand-100"
                       >
-                        <Play size={14} /> {c.status === "scheduled" ? "Start now" : "Start"}
+                        <Play size={14} /> {c.status === "scheduled" ? t.campaigns.startNow : t.campaigns.start}
                       </button>
                     )}
                     {c.status === "scheduled" && (
@@ -131,7 +133,7 @@ export default function CampaignsPage() {
                         onClick={() => handleAction(c.id, "unschedule")}
                         className="flex items-center gap-1.5 text-sm font-medium bg-gray-50 text-gray-600 rounded-lg px-3 py-2 hover:bg-gray-100"
                       >
-                        Cancel schedule
+                        {t.campaigns.cancelSchedule}
                       </button>
                     )}
                     {c.status === "running" && (
@@ -139,7 +141,7 @@ export default function CampaignsPage() {
                         onClick={() => handleAction(c.id, "pause")}
                         className="flex items-center gap-1.5 text-sm font-medium bg-amber-50 text-amber-700 rounded-lg px-3 py-2 hover:bg-amber-100"
                       >
-                        <Pause size={14} /> Pause
+                        <Pause size={14} /> {t.campaigns.pause}
                       </button>
                     )}
                     {c.status === "paused" && (
@@ -147,7 +149,7 @@ export default function CampaignsPage() {
                         onClick={() => handleAction(c.id, "resume")}
                         className="flex items-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg px-3 py-2 hover:bg-brand-100"
                       >
-                        <Play size={14} /> Resume
+                        <Play size={14} /> {t.campaigns.resume}
                       </button>
                     )}
                     {(c.status === "running" || c.status === "paused") && (
@@ -155,16 +157,16 @@ export default function CampaignsPage() {
                         onClick={() => handleAction(c.id, "stop")}
                         className="flex items-center gap-1.5 text-sm font-medium bg-red-50 text-red-700 rounded-lg px-3 py-2 hover:bg-red-100"
                       >
-                        <Square size={14} /> Stop
+                        <Square size={14} /> {t.campaigns.stop}
                       </button>
                     )}
                     <button
                       onClick={() => handleDuplicate(c.id)}
                       disabled={duplicatingId === c.id}
                       className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50"
-                      title="Duplicate campaign"
+                      title={t.campaigns.duplicateTooltip}
                     >
-                      <Copy size={14} /> {duplicatingId === c.id ? "Duplicating…" : "Duplicate"}
+                      <Copy size={14} /> {duplicatingId === c.id ? t.campaigns.duplicating : t.campaigns.duplicate}
                     </button>
                   </div>
                 </div>

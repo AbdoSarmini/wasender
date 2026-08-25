@@ -6,6 +6,7 @@ import Badge from "@/components/Badge";
 import Modal from "@/components/Modal";
 import { apiFetch, ApiError } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
+import { useI18n } from "@/lib/i18n/context";
 import { Plus, Smartphone, LogOut, Trash2, RefreshCw, Loader2 } from "lucide-react";
 
 interface Device {
@@ -21,6 +22,7 @@ function effectiveStatus(d: Device) {
 }
 
 export default function DevicesPage() {
+  const { t } = useI18n();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -66,7 +68,7 @@ export default function DevicesPage() {
       await load();
       setQrDeviceId(data.device.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to add device");
+      setError(err instanceof ApiError ? err.message : t.devices.addFailed);
     } finally {
       setCreating(false);
     }
@@ -84,12 +86,12 @@ export default function DevicesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remove this device? This cannot be undone.")) return;
+    if (!confirm(t.devices.deleteConfirm)) return;
     try {
       await apiFetch(`/api/devices/${id}`, { method: "DELETE" });
       load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "Failed to delete device");
+      alert(err instanceof ApiError ? err.message : t.devices.deleteFailed);
     }
   }
 
@@ -98,14 +100,14 @@ export default function DevicesPage() {
   return (
     <div>
       <PageHeader
-        title="Devices"
-        description="Connect WhatsApp numbers by scanning a QR code, just like WhatsApp Web."
+        title={t.devices.title}
+        description={t.devices.description}
         action={
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-700 transition"
           >
-            <Plus size={16} /> Add device
+            <Plus size={16} /> {t.devices.addDevice}
           </button>
         }
       />
@@ -114,12 +116,12 @@ export default function DevicesPage() {
         {!loading && devices.length === 0 && (
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
             <Smartphone className="mx-auto text-gray-300" size={40} />
-            <p className="mt-3 text-gray-500">No devices connected yet.</p>
+            <p className="mt-3 text-gray-500">{t.devices.noDevicesYet}</p>
             <button
               onClick={() => setShowAdd(true)}
               className="mt-4 text-brand-600 font-medium text-sm hover:text-brand-700"
             >
-              Connect your first WhatsApp number
+              {t.devices.connectFirstDevice}
             </button>
           </div>
         )}
@@ -138,7 +140,7 @@ export default function DevicesPage() {
                     <div>
                       <p className="font-semibold text-gray-900">{d.name}</p>
                       <p className="text-sm text-gray-500">
-                        {d.runtime?.phone || d.phone ? `+${d.runtime?.phone || d.phone}` : "Not linked"}
+                        {d.runtime?.phone || d.phone ? `+${d.runtime?.phone || d.phone}` : t.devices.notLinked}
                       </p>
                     </div>
                   </div>
@@ -151,21 +153,21 @@ export default function DevicesPage() {
                       onClick={() => handleLogout(d.id)}
                       className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg py-2 hover:bg-gray-50"
                     >
-                      <LogOut size={14} /> Disconnect
+                      <LogOut size={14} /> {t.devices.disconnect}
                     </button>
                   ) : isConnecting ? (
                     <button
                       onClick={() => setQrDeviceId(d.id)}
                       className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg py-2 hover:bg-brand-100"
                     >
-                      <Loader2 size={14} className="animate-spin" /> Show QR
+                      <Loader2 size={14} className="animate-spin" /> {t.devices.showQr}
                     </button>
                   ) : (
                     <button
                       onClick={() => handleReconnect(d.id)}
                       className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg py-2 hover:bg-brand-100"
                     >
-                      <RefreshCw size={14} /> Connect
+                      <RefreshCw size={14} /> {t.devices.connect}
                     </button>
                   )}
                   <button
@@ -180,26 +182,21 @@ export default function DevicesPage() {
           })}
         </div>
 
-        <div className="mt-8 rounded-xl border-l-4 border-red-400 bg-red-50 p-4">
-          <p className="text-sm font-semibold text-red-800">⚠ Important Disclaimer – Use at Your Own Risk</p>
-          <p className="text-sm text-red-700 mt-1">
-            This tool automates WhatsApp Web. WhatsApp does not officially support bulk/automated
-            messaging and may restrict or ban accounts that send unsolicited or high-volume
-            messages. Use reasonable delays, only message contacts who consent to receive
-            messages, and use this software entirely at your own risk.
-          </p>
+        <div className="mt-8 rounded-xl border-l-4 rtl:border-l-0 rtl:border-r-4 border-red-400 bg-red-50 p-4">
+          <p className="text-sm font-semibold text-red-800">{t.devices.disclaimerTitle}</p>
+          <p className="text-sm text-red-700 mt-1">{t.devices.disclaimerBody}</p>
         </div>
       </div>
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add a device">
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title={t.devices.addDeviceTitle}>
         <form onSubmit={handleCreate} className="space-y-4">
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Device name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.devices.deviceName}</label>
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Sales Line"
+              placeholder={t.devices.deviceNamePlaceholder}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
@@ -209,30 +206,27 @@ export default function DevicesPage() {
             className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-700 disabled:opacity-60"
           >
             {creating && <Loader2 className="animate-spin" size={16} />}
-            Continue to QR scan
+            {t.devices.continueToQrScan}
           </button>
         </form>
       </Modal>
 
-      <Modal open={!!qrDevice} onClose={() => setQrDeviceId(null)} title={`Connect ${qrDevice?.name || ""}`}>
+      <Modal open={!!qrDevice} onClose={() => setQrDeviceId(null)} title={t.devices.connectTitle(qrDevice?.name || "")}>
         <div className="text-center">
           {qrDevice?.runtime?.status === "qr" && qrDevice.runtime.qr ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrDevice.runtime.qr} alt="QR code" className="mx-auto w-56 h-56 rounded-lg border border-gray-100" />
-              <p className="text-sm text-gray-600 mt-4">
-                Open WhatsApp on your phone → Settings → Linked devices → Link a device, then scan
-                this code.
-              </p>
+              <p className="text-sm text-gray-600 mt-4">{t.devices.scanInstructions}</p>
             </>
           ) : qrDevice?.runtime?.status === "connected" ? (
             <div className="py-10">
-              <p className="text-green-600 font-semibold">Connected successfully!</p>
+              <p className="text-green-600 font-semibold">{t.devices.connectedSuccessfully}</p>
             </div>
           ) : (
             <div className="py-10 flex flex-col items-center gap-3 text-gray-500">
               <Loader2 className="animate-spin" size={24} />
-              <p className="text-sm">Waiting for QR code…</p>
+              <p className="text-sm">{t.devices.waitingForQr}</p>
             </div>
           )}
         </div>

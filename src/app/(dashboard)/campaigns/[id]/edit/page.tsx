@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import CampaignForm, { type CampaignFormInitial } from "@/components/CampaignForm";
 import { apiFetch } from "@/lib/api";
+import { useI18n } from "@/lib/i18n/context";
 
 interface CampaignMessage {
   contactId: string | null;
@@ -31,6 +32,7 @@ interface CampaignDetail {
 export default function EditCampaignPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const [initial, setInitial] = useState<CampaignFormInitial | null>(null);
   const [loading, setLoading] = useState(true);
   const [notEditable, setNotEditable] = useState(false);
@@ -70,26 +72,26 @@ export default function EditCampaignPage() {
     })();
   }, [params.id]);
 
-  if (loading) return <div className="p-8 text-gray-500">Loading...</div>;
+  if (loading) return <div className="p-8 text-gray-500">{t.campaignDetail.loading}</div>;
   if (notEditable) {
     return (
       <div className="p-8 text-gray-500">
-        This campaign has already started and can no longer be edited.{" "}
+        {t.editCampaign.notEditable}{" "}
         <button
           onClick={() => router.push(`/campaigns/${params.id}`)}
           className="text-brand-600 hover:underline"
         >
-          Back to campaign
+          {t.editCampaign.backToCampaign}
         </button>
       </div>
     );
   }
-  if (!initial) return <div className="p-8 text-gray-500">Campaign not found.</div>;
+  if (!initial) return <div className="p-8 text-gray-500">{t.editCampaign.notFound}</div>;
 
   return (
     <div>
-      <PageHeader title="Edit campaign" description="Update this campaign before it starts sending." />
-      <CampaignForm campaignId={params.id} initial={initial} submitLabel="Save changes" />
+      <PageHeader title={t.editCampaign.title} description={t.editCampaign.description} />
+      <CampaignForm campaignId={params.id} initial={initial} submitLabel={t.campaignForm.saveChanges} />
     </div>
   );
 }

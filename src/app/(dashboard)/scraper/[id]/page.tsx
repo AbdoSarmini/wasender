@@ -8,6 +8,7 @@ import Badge from "@/components/Badge";
 import Modal from "@/components/Modal";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
+import { useI18n } from "@/lib/i18n/context";
 import { ArrowLeft, Download, UserPlus, Square } from "lucide-react";
 
 interface ScrapeJob {
@@ -42,6 +43,7 @@ interface Group {
 export default function ScrapeJobDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const [job, setJob] = useState<ScrapeJob | null>(null);
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,23 +102,23 @@ export default function ScrapeJobDetailPage() {
         { method: "POST", body: JSON.stringify({ groupId: groupId || null, groupName: groupName || null }) }
       );
       setImportResult(
-        `Imported ${data.total} results: ${data.created} new contacts, ${data.updated} updated, ${data.skipped} skipped.`
+        t.scraperDetail.importedSummary(data.total, data.created, data.updated, data.skipped)
       );
     } catch (err) {
-      setImportResult(err instanceof Error ? err.message : "Import failed");
+      setImportResult(err instanceof Error ? err.message : t.scraperDetail.importFailed);
     } finally {
       setImporting(false);
     }
   }
 
-  if (loading) return <div className="p-8 text-gray-500">Loading...</div>;
-  if (!job) return <div className="p-8 text-gray-500">Scrape job not found.</div>;
+  if (loading) return <div className="p-8 text-gray-500">{t.scraperDetail.loading}</div>;
+  if (!job) return <div className="p-8 text-gray-500">{t.scraperDetail.notFound}</div>;
 
   return (
     <div>
       <PageHeader
         title={`${job.query} · ${job.location}`}
-        description={`${job.resultCount} of up to ${job.maxResults} results`}
+        description={t.scraper.resultsOfUpTo(job.resultCount, job.maxResults)}
         action={
           <div className="flex items-center gap-2">
             {(job.status === "queued" || job.status === "running") && (
@@ -124,21 +126,21 @@ export default function ScrapeJobDetailPage() {
                 onClick={handleStop}
                 className="flex items-center gap-1.5 text-sm font-medium bg-red-50 text-red-700 rounded-lg px-3 py-2 hover:bg-red-100"
               >
-                <Square size={14} /> Stop
+                <Square size={14} /> {t.scraperDetail.stop}
               </button>
             )}
             <a
               href={`/api/scrapes/${job.id}/export`}
               className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600"
             >
-              <Download size={14} /> Export CSV
+              <Download size={14} /> {t.scraperDetail.exportCsv}
             </a>
             <button
               onClick={openImportModal}
               disabled={job.resultCount === 0}
               className="flex items-center gap-1.5 text-sm font-medium bg-brand-50 text-brand-700 rounded-lg px-3 py-2 hover:bg-brand-100 disabled:opacity-50"
             >
-              <UserPlus size={14} /> Import to Contacts
+              <UserPlus size={14} /> {t.scraperDetail.importToContacts}
             </button>
           </div>
         }
@@ -146,7 +148,7 @@ export default function ScrapeJobDetailPage() {
 
       <div className="p-8 space-y-6">
         <Link href="/scraper" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
-          <ArrowLeft size={14} /> Back to scraper
+          <ArrowLeft size={14} className="rtl:rotate-180" /> {t.scraperDetail.backToScraper}
         </Link>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6">
@@ -158,18 +160,18 @@ export default function ScrapeJobDetailPage() {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Results</h2>
+            <h2 className="font-semibold text-gray-900">{t.scraperDetail.results}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
                 <tr>
-                  <th className="text-left px-6 py-3 font-medium">Name</th>
-                  <th className="text-left px-6 py-3 font-medium">Phone</th>
-                  <th className="text-left px-6 py-3 font-medium">Address</th>
-                  <th className="text-left px-6 py-3 font-medium">Category</th>
-                  <th className="text-left px-6 py-3 font-medium">Rating</th>
-                  <th className="text-left px-6 py-3 font-medium">Website</th>
+                  <th className="text-left px-6 py-3 font-medium">{t.scraperDetail.name}</th>
+                  <th className="text-left px-6 py-3 font-medium">{t.scraperDetail.phone}</th>
+                  <th className="text-left px-6 py-3 font-medium">{t.scraperDetail.address}</th>
+                  <th className="text-left px-6 py-3 font-medium">{t.scraperDetail.category}</th>
+                  <th className="text-left px-6 py-3 font-medium">{t.scraperDetail.rating}</th>
+                  <th className="text-left px-6 py-3 font-medium">{t.scraperDetail.website}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -199,19 +201,17 @@ export default function ScrapeJobDetailPage() {
         </div>
       </div>
 
-      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import to Contacts">
+      <Modal open={importOpen} onClose={() => setImportOpen(false)} title={t.scraperDetail.importToContacts}>
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Results with a phone number will be added to your Contacts, optionally grouped for a campaign.
-          </p>
+          <p className="text-sm text-gray-500">{t.scraperDetail.importModalDescription}</p>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Add to existing group</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.scraperDetail.addToExistingGroup}</label>
             <select
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              <option value="">No group</option>
+              <option value="">{t.common.noGroup}</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
@@ -220,11 +220,11 @@ export default function ScrapeJobDetailPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Or create a new group</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.scraperDetail.orCreateNewGroup}</label>
             <input
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="e.g. Cairo Restaurants"
+              placeholder={t.scraperDetail.newGroupPlaceholder}
               disabled={!!groupId}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
             />
@@ -235,7 +235,7 @@ export default function ScrapeJobDetailPage() {
               onClick={() => router.push("/contacts")}
               className="text-sm font-medium text-gray-500 px-3 py-2 hover:text-gray-700"
             >
-              {importResult ? "View Contacts" : "Cancel"}
+              {importResult ? t.scraperDetail.viewContacts : t.scraperDetail.cancel}
             </button>
             {!importResult && (
               <button
@@ -243,7 +243,7 @@ export default function ScrapeJobDetailPage() {
                 disabled={importing}
                 className="bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-700 transition disabled:opacity-50"
               >
-                {importing ? "Importing…" : "Import"}
+                {importing ? t.scraperDetail.importing : t.scraperDetail.import}
               </button>
             )}
           </div>

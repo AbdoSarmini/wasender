@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { useI18n } from "@/lib/i18n/context";
 
 const STYLES: Record<string, string> = {
   connected: "bg-green-50 text-green-700 ring-green-600/20",
@@ -20,6 +21,8 @@ const STYLES: Record<string, string> = {
 };
 
 export default function Badge({ status }: { status: string }) {
+  const { t } = useI18n();
+  const label = (t.badge as Record<string, string>)[status] || status;
   return (
     <span
       className={clsx(
@@ -28,7 +31,7 @@ export default function Badge({ status }: { status: string }) {
       )}
     >
       <span className="w-1.5 h-1.5 rounded-full bg-current" />
-      {status}
+      {label}
     </span>
   );
 }

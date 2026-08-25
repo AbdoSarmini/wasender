@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
+import { useI18n } from "@/lib/i18n/context";
 import { Search } from "lucide-react";
 
 interface LogEntry {
@@ -20,6 +21,7 @@ interface LogEntry {
 }
 
 export default function LogsPage() {
+  const { t } = useI18n();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -52,7 +54,7 @@ export default function LogsPage() {
 
   return (
     <div>
-      <PageHeader title="Logs" description="Every message attempt across all your campaigns." />
+      <PageHeader title={t.logs.title} description={t.logs.description} />
 
       <div className="p-8 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -61,7 +63,7 @@ export default function LogsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or phone..."
+              placeholder={t.logs.searchPlaceholder}
               className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             />
           </div>
@@ -70,32 +72,32 @@ export default function LogsPage() {
             onChange={(e) => setStatus(e.target.value)}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
           >
-            <option value="all">All statuses</option>
-            <option value="queued">Queued</option>
-            <option value="sending">Sending</option>
-            <option value="sent">Sent</option>
-            <option value="failed">Failed</option>
-            <option value="skipped">Skipped</option>
+            <option value="all">{t.logs.allStatuses}</option>
+            <option value="queued">{t.logs.queued}</option>
+            <option value="sending">{t.logs.sending}</option>
+            <option value="sent">{t.logs.sent}</option>
+            <option value="failed">{t.logs.failed}</option>
+            <option value="skipped">{t.logs.skipped}</option>
           </select>
-          <span className="text-sm text-gray-500">{total} total</span>
+          <span className="text-sm text-gray-500">{t.logs.total(total)}</span>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
               <tr>
-                <th className="text-left px-6 py-3 font-medium">Contact</th>
-                <th className="text-left px-6 py-3 font-medium">Campaign</th>
-                <th className="text-left px-6 py-3 font-medium">Status</th>
-                <th className="text-left px-6 py-3 font-medium">Detail</th>
-                <th className="text-left px-6 py-3 font-medium">Time</th>
+                <th className="text-left px-6 py-3 font-medium">{t.logs.contact}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.logs.campaign}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.logs.status}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.logs.detail}</th>
+                <th className="text-left px-6 py-3 font-medium">{t.logs.time}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {!loading && logs.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
-                    No log entries yet.
+                    {t.logs.noEntriesYet}
                   </td>
                 </tr>
               )}

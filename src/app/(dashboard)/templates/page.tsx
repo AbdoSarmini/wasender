@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useI18n } from "@/lib/i18n/context";
 import { Plus, FileText, Trash2, Pencil, Paperclip, X, Loader2 } from "lucide-react";
 
 interface Template {
@@ -16,9 +17,8 @@ interface Template {
   updatedAt: string;
 }
 
-const VARIABLE_HINT = "Use {{name}}, {{phone}} or any custom column from your contacts (e.g. {{company}}). Use {{random}} to insert a random 8-digit number.";
-
 export default function TemplatesPage() {
+  const { t } = useI18n();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -80,33 +80,33 @@ export default function TemplatesPage() {
       setShowModal(false);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save template");
+      setError(err instanceof ApiError ? err.message : t.templates.saveFailed);
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this template?")) return;
+    if (!confirm(t.templates.deleteConfirm)) return;
     try {
       await apiFetch(`/api/templates/${id}`, { method: "DELETE" });
       load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "Failed to delete template");
+      alert(err instanceof ApiError ? err.message : t.templates.deleteFailed);
     }
   }
 
   return (
     <div>
       <PageHeader
-        title="Templates"
-        description="Reusable message templates with personalization variables and media."
+        title={t.templates.title}
+        description={t.templates.description}
         action={
           <button
             onClick={openCreate}
             className="flex items-center gap-2 bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-700 transition"
           >
-            <Plus size={16} /> New template
+            <Plus size={16} /> {t.templates.newTemplate}
           </button>
         }
       />
@@ -115,9 +115,9 @@ export default function TemplatesPage() {
         {!loading && templates.length === 0 && (
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
             <FileText className="mx-auto text-gray-300" size={40} />
-            <p className="mt-3 text-gray-500">No templates yet.</p>
+            <p className="mt-3 text-gray-500">{t.templates.noTemplatesYet}</p>
             <button onClick={openCreate} className="mt-4 text-brand-600 font-medium text-sm hover:text-brand-700">
-              Create your first template
+              {t.templates.createFirstTemplate}
             </button>
           </div>
         )}
@@ -147,21 +147,21 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? "Edit template" : "New template"}>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? t.templates.editTemplate : t.templates.newTemplate}>
         <form onSubmit={handleSave} className="space-y-4">
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Template name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.templates.templateName}</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
-              placeholder="e.g. Welcome message"
+              placeholder={t.templates.templateNamePlaceholder}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.templates.message}</label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -170,10 +170,10 @@ export default function TemplatesPage() {
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
               placeholder={"Hi {{name}}, thanks for..."}
             />
-            <p className="text-xs text-gray-400 mt-1">{VARIABLE_HINT}</p>
+            <p className="text-xs text-gray-400 mt-1">{t.templates.variableHint}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Attachment (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.templates.attachment}</label>
             {editing?.mediaPath && !mediaFile && !removeMedia ? (
               <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm">
                 <span className="flex items-center gap-1.5 text-gray-700 truncate">
@@ -199,7 +199,7 @@ export default function TemplatesPage() {
             className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-700 disabled:opacity-60"
           >
             {saving && <Loader2 className="animate-spin" size={16} />}
-            {editing ? "Save changes" : "Create template"}
+            {editing ? t.campaignForm.saveChanges : t.templates.createTemplate}
           </button>
         </form>
       </Modal>

@@ -8,6 +8,7 @@ import Badge from "@/components/Badge";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
+import { useI18n } from "@/lib/i18n/context";
 
 interface Stats {
   totalContacts: number;
@@ -34,6 +35,7 @@ interface Stats {
 }
 
 export default function OverviewPage() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<Stats | null>(null);
 
   async function load() {
@@ -57,15 +59,15 @@ export default function OverviewPage() {
 
   return (
     <div>
-      <PageHeader title="Overview" description="A snapshot of your WhatsApp campaign activity." />
+      <PageHeader title={t.overview.title} description={t.overview.description} />
 
       <div className="p-8 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Contacts" value={stats?.totalContacts ?? "—"} icon={Users} tone="brand" />
-          <StatCard label="Templates" value={stats?.totalTemplates ?? "—"} icon={FileText} tone="brand" />
-          <StatCard label="Campaigns" value={stats?.totalCampaigns ?? "—"} icon={MessageSquare} tone="brand" />
+          <StatCard label={t.overview.contacts} value={stats?.totalContacts ?? "—"} icon={Users} tone="brand" />
+          <StatCard label={t.overview.templates} value={stats?.totalTemplates ?? "—"} icon={FileText} tone="brand" />
+          <StatCard label={t.overview.campaigns} value={stats?.totalCampaigns ?? "—"} icon={MessageSquare} tone="brand" />
           <StatCard
-            label="Connected devices"
+            label={t.overview.connectedDevices}
             value={stats ? `${stats.connectedDevices}/${stats.totalDevices}` : "—"}
             icon={Smartphone}
             tone="brand"
@@ -73,25 +75,25 @@ export default function OverviewPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Sent today" value={stats?.sentToday ?? "—"} icon={Send} tone="green" />
-          <StatCard label="Failed today" value={stats?.failedToday ?? "—"} icon={XCircle} tone="red" />
-          <StatCard label="Success rate" value={stats ? `${stats.successRate}%` : "—"} icon={TrendingUp} tone="green" />
-          <StatCard label="Active campaigns" value={stats?.activeCampaigns ?? "—"} icon={Zap} tone="amber" />
+          <StatCard label={t.overview.sentToday} value={stats?.sentToday ?? "—"} icon={Send} tone="green" />
+          <StatCard label={t.overview.failedToday} value={stats?.failedToday ?? "—"} icon={XCircle} tone="red" />
+          <StatCard label={t.overview.successRate} value={stats ? `${stats.successRate}%` : "—"} icon={TrendingUp} tone="green" />
+          <StatCard label={t.overview.activeCampaigns} value={stats?.activeCampaigns ?? "—"} icon={Zap} tone="amber" />
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Recent campaigns</h2>
+            <h2 className="font-semibold text-gray-900">{t.overview.recentCampaigns}</h2>
             <Link href="/campaigns" className="text-sm text-brand-600 font-medium hover:text-brand-700">
-              View all
+              {t.overview.viewAll}
             </Link>
           </div>
           <div className="divide-y divide-gray-100">
             {stats?.recentCampaigns?.length === 0 && (
               <p className="px-6 py-8 text-sm text-gray-500 text-center">
-                No campaigns yet.{" "}
+                {t.overview.noCampaignsYet}{" "}
                 <Link href="/campaigns/new" className="text-brand-600 font-medium">
-                  Create your first campaign
+                  {t.overview.createFirstCampaign}
                 </Link>
                 .
               </p>
@@ -105,8 +107,8 @@ export default function OverviewPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-gray-900 truncate">{c.name}</p>
                   <p className="text-sm text-gray-500 truncate">
-                    {c.device.name} · {c.template.name} · {c.sentCount}/{c.totalCount} sent
-                    {c.failedCount > 0 ? `, ${c.failedCount} failed` : ""}
+                    {c.device.name} · {c.template.name} · {t.overview.sentOf(c.sentCount, c.totalCount)}
+                    {c.failedCount > 0 ? t.overview.failedSuffix(c.failedCount) : ""}
                   </p>
                 </div>
                 <Badge status={c.status} />
