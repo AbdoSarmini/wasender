@@ -2,18 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { waManager } from "@/lib/whatsapp/manager";
+import { getSession } from "@/lib/auth";
 
 export async function GET() {
-  const devices = await prisma.device.findMany({ orderBy: { createdAt: "asc" } });
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const devices = await prisma.device.findMany({
+    where: { userId: session.sub },
+    orderBy: { createdAt: "asc" },
+  });
   const withRuntime = devices.map((d) => ({ ...d, runtime: waManager.getState(d.id) }));
   return NextResponse.json({ devices: withRuntime });
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await req.json().catch(() => ({}));
   const name = (body?.name as string)?.trim() || `Device ${Date.now()}`;
 
-  const deviceCount = await prisma.device.count();
+  const deviceCount = await prisma.device.count({ where: { userId: session.sub } });
   const DEVICE_LIMIT = parseInt(process.env.DEVICE_LIMIT || "5", 10);
   if (deviceCount >= DEVICE_LIMIT) {
     return NextResponse.json(
@@ -24,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const clientId = crypto.randomUUID();
   const device = await prisma.device.create({
-    data: { name, clientId, status: "initializing" },
+    data: { name, clientId, status: "initializing", userId: session.sub },
   });
 
   waManager.start(device.id, clientId).catch((err) => {

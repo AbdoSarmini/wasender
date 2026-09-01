@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { scraperRunner } from "@/lib/scraper/runner";
+import { getSession } from "@/lib/auth";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const jobs = await prisma.scrapeJob.findMany({
+    where: { userId: session.sub },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { results: true } } },
   });
@@ -11,6 +15,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const query = (body?.query as string)?.trim();
   const location = (body?.location as string)?.trim();
@@ -29,7 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   const job = await prisma.scrapeJob.create({
-    data: { query, location, maxResults, status: "queued" },
+    data: { query, location, maxResults, status: "queued", userId: session.sub },
   });
 
   try {

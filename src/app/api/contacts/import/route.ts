@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseContactsCsv } from "@/lib/csv-contacts";
+import { getSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = session.sub;
+
   const form = await req.formData();
   const file = form.get("file") as File | null;
   const groupId = (form.get("groupId") as string) || null;
@@ -10,6 +15,11 @@ export async function POST(req: NextRequest) {
 
   if (!file || file.size === 0) {
     return NextResponse.json({ error: "A CSV file is required" }, { status: 400 });
+  }
+
+  if (groupId) {
+    const group = await prisma.group.findUnique({ where: { id: groupId, userId } });
+    if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
   const text = await file.text();
@@ -25,9 +35,9 @@ export async function POST(req: NextRequest) {
   let resolvedGroupId = groupId;
   if (!resolvedGroupId && groupName) {
     const group = await prisma.group.upsert({
-      where: { name: groupName },
+      where: { userId_name: { userId, name: groupName } },
       update: {},
-      create: { name: groupName },
+      create: { name: groupName, userId },
     });
     resolvedGroupId = group.id;
   }
@@ -38,10 +48,10 @@ export async function POST(req: NextRequest) {
   for (const row of rows) {
     const { phone, name, fields } = row;
 
-    const existing = await prisma.contact.findUnique({ where: { phone } });
+    const existing = await prisma.contact.findUnique({ where: { userId_phone: { userId, phone } } });
     if (existing) {
       await prisma.contact.update({
-        where: { phone },
+        where: { userId_phone: { userId, phone } },
         data: {
           name,
           fields,
@@ -51,7 +61,7 @@ export async function POST(req: NextRequest) {
       updated++;
     } else {
       await prisma.contact.create({
-        data: { name, phone, fields, groupId: resolvedGroupId },
+        data: { name, phone, fields, groupId: resolvedGroupId, userId },
       });
       created++;
     }

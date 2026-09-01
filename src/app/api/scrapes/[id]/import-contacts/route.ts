@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/csv-contacts";
+import { getSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = session.sub;
   const params = await props.params;
   const body = await req.json().catch(() => ({}));
   const groupId = (body?.groupId as string) || null;
   const groupName = (body?.groupName as string)?.trim() || null;
 
-  const job = await prisma.scrapeJob.findUnique({ where: { id: params.id } });
+  const job = await prisma.scrapeJob.findUnique({ where: { id: params.id, userId } });
   if (!job) return NextResponse.json({ error: "Scrape job not found" }, { status: 404 });
+
+  if (groupId) {
+    const group = await prisma.group.findUnique({ where: { id: groupId, userId } });
+    if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
+  }
 
   const results = await prisma.scrapeResult.findMany({
     where: { scrapeJobId: params.id, phone: { not: null } },
@@ -21,9 +30,9 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   let resolvedGroupId = groupId;
   if (!resolvedGroupId && groupName) {
     const group = await prisma.group.upsert({
-      where: { name: groupName },
+      where: { userId_name: { userId, name: groupName } },
       update: {},
-      create: { name: groupName },
+      create: { name: groupName, userId },
     });
     resolvedGroupId = group.id;
   }
@@ -43,16 +52,16 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 
     const fields = r.address || r.category ? JSON.stringify({ address: r.address, category: r.category }) : null;
 
-    const existing = await prisma.contact.findUnique({ where: { phone } });
+    const existing = await prisma.contact.findUnique({ where: { userId_phone: { userId, phone } } });
     if (existing) {
       await prisma.contact.update({
-        where: { phone },
+        where: { userId_phone: { userId, phone } },
         data: { groupId: resolvedGroupId ?? existing.groupId },
       });
       updated++;
     } else {
       await prisma.contact.create({
-        data: { name: r.name, phone, fields, groupId: resolvedGroupId },
+        data: { name: r.name, phone, fields, groupId: resolvedGroupId, userId },
       });
       created++;
     }

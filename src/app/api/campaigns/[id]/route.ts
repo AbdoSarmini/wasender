@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { campaignRunner } from "@/lib/campaign/runner";
+import { getSession } from "@/lib/auth";
 
 type CsvContactRow = { name: string; phone: string; fields: string | null };
 
@@ -30,9 +31,11 @@ function readCsvContacts(body: unknown): CsvContactRow[] {
 }
 
 export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const params = await props.params;
   const campaign = await prisma.campaign.findUnique({
-    where: { id: params.id },
+    where: { id: params.id, userId: session.sub },
     include: {
       device: true,
       template: true,
@@ -49,8 +52,11 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
 }
 
 export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = session.sub;
   const params = await props.params;
-  const existing = await prisma.campaign.findUnique({ where: { id: params.id } });
+  const existing = await prisma.campaign.findUnique({ where: { id: params.id, userId } });
   if (!existing) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   if (existing.status !== "draft" && existing.status !== "scheduled") {
     return NextResponse.json(
@@ -88,16 +94,24 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
   }
 
   const [device, template] = await Promise.all([
-    prisma.device.findUnique({ where: { id: deviceId } }),
-    prisma.template.findUnique({ where: { id: templateId } }),
+    prisma.device.findUnique({ where: { id: deviceId, userId } }),
+    prisma.template.findUnique({ where: { id: templateId, userId } }),
   ]);
   if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
   if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
 
+  if (groupIds.length > 0) {
+    const ownedGroupCount = await prisma.group.count({ where: { id: { in: groupIds }, userId } });
+    if (ownedGroupCount !== groupIds.length) {
+      return NextResponse.json({ error: "One or more groups not found" }, { status: 404 });
+    }
+  }
+
   const contacts = await prisma.contact.findMany({
     where: targetAll
-      ? {}
+      ? { userId }
       : {
+          userId,
           OR: [
             ...(groupIds.length ? [{ groupId: { in: groupIds } }] : []),
             ...(contactIds.length ? [{ id: { in: contactIds } }] : []),
@@ -115,9 +129,9 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       const savedIds: string[] = [];
       for (const row of newCsvRows) {
         const contact = await prisma.contact.upsert({
-          where: { phone: row.phone },
+          where: { userId_phone: { userId, phone: row.phone } },
           update: { name: row.name, fields: row.fields },
-          create: { name: row.name, phone: row.phone, fields: row.fields },
+          create: { name: row.name, phone: row.phone, fields: row.fields, userId },
         });
         savedIds.push(contact.id);
       }
@@ -165,8 +179,10 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 }
 
 export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const params = await props.params;
-  const campaign = await prisma.campaign.findUnique({ where: { id: params.id } });
+  const campaign = await prisma.campaign.findUnique({ where: { id: params.id, userId: session.sub } });
   if (!campaign) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   if (campaignRunner.isActive(campaign.id)) {
     campaignRunner.stop(campaign.id);

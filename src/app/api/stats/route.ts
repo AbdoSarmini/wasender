@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { waManager } from "@/lib/whatsapp/manager";
+import { getSession } from "@/lib/auth";
 
 // GET-only route with no dynamic segments would otherwise be statically
 // prerendered at build time, executing a DB query before DATABASE_URL is
@@ -8,6 +9,10 @@ import { waManager } from "@/lib/whatsapp/manager";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = session.sub;
+
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
@@ -23,16 +28,17 @@ export async function GET() {
     totalFailed,
     recentCampaigns,
   ] = await Promise.all([
-    prisma.contact.count(),
-    prisma.template.count(),
-    prisma.campaign.count(),
-    prisma.device.findMany(),
-    prisma.campaign.count({ where: { status: "running" } }),
-    prisma.campaignMessage.count({ where: { status: "sent", sentAt: { gte: startOfDay } } }),
-    prisma.campaignMessage.count({ where: { status: "failed", createdAt: { gte: startOfDay } } }),
-    prisma.campaignMessage.count({ where: { status: "sent" } }),
-    prisma.campaignMessage.count({ where: { status: "failed" } }),
+    prisma.contact.count({ where: { userId } }),
+    prisma.template.count({ where: { userId } }),
+    prisma.campaign.count({ where: { userId } }),
+    prisma.device.findMany({ where: { userId } }),
+    prisma.campaign.count({ where: { userId, status: "running" } }),
+    prisma.campaignMessage.count({ where: { status: "sent", sentAt: { gte: startOfDay }, campaign: { userId } } }),
+    prisma.campaignMessage.count({ where: { status: "failed", createdAt: { gte: startOfDay }, campaign: { userId } } }),
+    prisma.campaignMessage.count({ where: { status: "sent", campaign: { userId } } }),
+    prisma.campaignMessage.count({ where: { status: "failed", campaign: { userId } } }),
     prisma.campaign.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
       take: 5,
       include: { device: { select: { name: true } }, template: { select: { name: true } } },

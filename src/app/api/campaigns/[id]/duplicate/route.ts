@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 export async function POST(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const params = await props.params;
   const campaign = await prisma.campaign.findUnique({
-    where: { id: params.id },
+    where: { id: params.id, userId: session.sub },
     include: {
       groups: true,
       messages: true,
@@ -15,6 +18,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
   const duplicate = await prisma.campaign.create({
     data: {
       name: `${campaign.name} (copy)`,
+      userId: session.sub,
       deviceId: campaign.deviceId,
       templateId: campaign.templateId,
       minDelay: campaign.minDelay,

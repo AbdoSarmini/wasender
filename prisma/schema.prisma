@@ -14,11 +14,20 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  devices    Device[]
+  templates  Template[]
+  groups     Group[]
+  contacts   Contact[]
+  campaigns  Campaign[]
+  scrapeJobs ScrapeJob[]
+
   @@map("users")
 }
 
 model Device {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   clientId  String   @unique
   phone     String?
@@ -33,6 +42,8 @@ model Device {
 
 model Template {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   content   String
   mediaPath String?
@@ -48,19 +59,24 @@ model Template {
 
 model Group {
   id        String    @id @default(cuid())
-  name      String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
   createdAt DateTime  @default(now())
 
   contacts       Contact[]
   campaignGroups CampaignGroup[]
 
+  @@unique([userId, name])
   @@map("groups")
 }
 
 model Contact {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
-  phone     String   @unique
+  phone     String
   fields    String? // JSON string of custom fields, e.g. {"company":"Acme"}
   groupId   String?
   group     Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -69,11 +85,14 @@ model Contact {
 
   messages CampaignMessage[]
 
+  @@unique([userId, phone])
   @@map("contacts")
 }
 
 model Campaign {
   id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   status      String    @default("draft") // draft | scheduled | queued | running | paused | completed | stopped | failed
   deviceId    String
@@ -110,6 +129,8 @@ model CampaignGroup {
 
 model ScrapeJob {
   id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   query       String
   location    String
   maxResults  Int       @default(60)

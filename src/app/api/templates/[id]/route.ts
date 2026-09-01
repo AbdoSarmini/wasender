@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteUploadedFile, saveUploadedFile } from "@/lib/upload";
+import { getSession } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const params = await props.params;
-  const template = await prisma.template.findUnique({ where: { id: params.id } });
+  const template = await prisma.template.findUnique({ where: { id: params.id, userId: session.sub } });
   if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
   return NextResponse.json({ template });
 }
 
 export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const params = await props.params;
-  const existing = await prisma.template.findUnique({ where: { id: params.id } });
+  const existing = await prisma.template.findUnique({ where: { id: params.id, userId: session.sub } });
   if (!existing) return NextResponse.json({ error: "Template not found" }, { status: 404 });
 
   const contentType = req.headers.get("content-type") || "";
@@ -46,8 +51,10 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
 }
 
 export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const params = await props.params;
-  const existing = await prisma.template.findUnique({ where: { id: params.id } });
+  const existing = await prisma.template.findUnique({ where: { id: params.id, userId: session.sub } });
   if (!existing) return NextResponse.json({ error: "Template not found" }, { status: 404 });
 
   const usedByCampaign = await prisma.campaign.count({ where: { templateId: params.id } });

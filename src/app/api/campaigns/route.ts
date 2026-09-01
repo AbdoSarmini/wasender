@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 type CsvContactRow = { name: string; phone: string; fields: string | null };
 
@@ -29,7 +30,10 @@ function readCsvContacts(body: unknown): CsvContactRow[] {
 }
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const campaigns = await prisma.campaign.findMany({
+    where: { userId: session.sub },
     orderBy: { createdAt: "desc" },
     include: {
       device: { select: { id: true, name: true, status: true } },
@@ -41,6 +45,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = session.sub;
   const body = await req.json().catch(() => ({}));
   const name = (body?.name as string)?.trim();
   const deviceId = body?.deviceId as string;
@@ -70,16 +77,24 @@ export async function POST(req: NextRequest) {
   }
 
   const [device, template] = await Promise.all([
-    prisma.device.findUnique({ where: { id: deviceId } }),
-    prisma.template.findUnique({ where: { id: templateId } }),
+    prisma.device.findUnique({ where: { id: deviceId, userId } }),
+    prisma.template.findUnique({ where: { id: templateId, userId } }),
   ]);
   if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
   if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
 
+  if (groupIds.length > 0) {
+    const ownedGroupCount = await prisma.group.count({ where: { id: { in: groupIds }, userId } });
+    if (ownedGroupCount !== groupIds.length) {
+      return NextResponse.json({ error: "One or more groups not found" }, { status: 404 });
+    }
+  }
+
   const contacts = await prisma.contact.findMany({
     where: targetAll
-      ? {}
+      ? { userId }
       : {
+          userId,
           OR: [
             ...(groupIds.length ? [{ groupId: { in: groupIds } }] : []),
             ...(contactIds.length ? [{ id: { in: contactIds } }] : []),
@@ -98,9 +113,9 @@ export async function POST(req: NextRequest) {
       const savedIds: string[] = [];
       for (const row of newCsvRows) {
         const contact = await prisma.contact.upsert({
-          where: { phone: row.phone },
+          where: { userId_phone: { userId, phone: row.phone } },
           update: { name: row.name, fields: row.fields },
-          create: { name: row.name, phone: row.phone, fields: row.fields },
+          create: { name: row.name, phone: row.phone, fields: row.fields, userId },
         });
         savedIds.push(contact.id);
       }
@@ -118,6 +133,7 @@ export async function POST(req: NextRequest) {
   const campaign = await prisma.campaign.create({
     data: {
       name,
+      userId,
       deviceId,
       templateId,
       minDelay,

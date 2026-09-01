@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedFile } from "@/lib/upload";
+import { getSession } from "@/lib/auth";
 
 export async function GET() {
-  const templates = await prisma.template.findMany({ orderBy: { createdAt: "desc" } });
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const templates = await prisma.template.findMany({
+    where: { userId: session.sub },
+    orderBy: { createdAt: "desc" },
+  });
   return NextResponse.json({ templates });
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const contentType = req.headers.get("content-type") || "";
   let name = "";
   let content = "";
@@ -37,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const template = await prisma.template.create({
-    data: { name, content, mediaPath, mediaName, mediaMime },
+    data: { name, content, mediaPath, mediaName, mediaMime, userId: session.sub },
   });
 
   return NextResponse.json({ template }, { status: 201 });
