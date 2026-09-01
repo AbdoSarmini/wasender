@@ -25,6 +25,10 @@ export interface DeviceRuntimeState {
 
 const AUTH_DIR = path.join(process.cwd(), ".wwebjs_auth");
 const CACHE_DIR = path.join(process.cwd(), ".wwebjs_cache");
+// whatsapp-web.js creates this lazily for its own WhatsApp-web-version cache,
+// but the debug screenshot timer below can fire before that happens on a
+// brand-new install (it always existed already on the long-running VPS).
+fs.mkdirSync(CACHE_DIR, { recursive: true });
 
 class WhatsAppManager extends EventEmitter {
   private clients = new Map<string, any>();

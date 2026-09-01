@@ -2,18 +2,27 @@
   "name": "wasender",
   "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "tsx watch server.ts",
     "build": "next build",
     "start": "cross-env NODE_ENV=production tsx server.ts",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "fetch-node": "node scripts/fetch-node.js",
+    "electron:dev": "npm run fetch-node && npm run build && electron .",
+    "electron:build": "npm run fetch-node && npm run build && electron-builder",
+    "electron:publish": "npm run fetch-node && npm run build && electron-builder --publish always"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "electron-updater": "^6.3.9",
     "jose": "^6.2.8",
     "lucide-react": "^1.28.0",
     "next": "^16.3.0",
@@ -25,6 +34,7 @@
     "react-dom": "^19.2.8",
     "socket.io": "^4.8.0",
     "socket.io-client": "^4.8.0",
+    "tsx": "^4.23.9",
     "whatsapp-web.js": "^1.34.7"
   },
   "devDependencies": {
@@ -35,9 +45,44 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "cross-env": "^10.1.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.9",
     "typescript": "^5.6.2"
+  },
+  "build": {
+    "appId": "com.abdosarmini.wasender",
+    "productName": "WaSender",
+    "asar": false,
+    "files": [
+      "electron/**/*",
+      "server.ts",
+      "next.config.js",
+      ".next/**/*",
+      "src/**/*",
+      "prisma/schema.prisma",
+      "prisma/migrations/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "AbdoSarmini",
+      "repo": "wasender"
+    },
+    "directories": {
+      "output": "release"
+    }
   }
 }

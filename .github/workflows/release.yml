@@ -1,0 +1,25 @@
+name: Release desktop app
+
+# Push a tag like v1.2.0 to build the Windows installer and publish it (plus
+# latest.yml) to a GitHub Release. electron-updater on installed copies polls
+# that release feed and self-updates — no separate server involved.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.15.0"
+
+      - run: npm ci
+
+      - run: npm run electron:publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -30,7 +30,12 @@ const port = parseInt(process.env.PORT || "3000", 10);
 // use HOST instead if you need to bind to a specific address.
 const hostname = process.env.HOST || "0.0.0.0";
 
-const app = next({ dev });
+// The Electron shell runs this server with cwd pointed at the OS user-data
+// directory (so uploads/, .wwebjs_auth/, and the sqlite db land somewhere
+// writable outside the installed app), but the Next.js build output still
+// lives in the app directory — APP_ROOT tells Next where to find it. Unset
+// in every other deployment, where cwd already is the app root.
+const app = next({ dev, dir: process.env.APP_ROOT || process.cwd() });
 const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
