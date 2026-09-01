@@ -12,7 +12,7 @@ import { MapPin, Search, Square, Trash2 } from "lucide-react";
 interface ScrapeJob {
   id: string;
   query: string;
-  location: string;
+  language: string;
   maxResults: number;
   status: string;
   resultCount: number;
@@ -25,7 +25,7 @@ export default function ScraperPage() {
   const [jobs, setJobs] = useState<ScrapeJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [location, setLocation] = useState("");
+  const [language, setLanguage] = useState("en");
   const [maxResults, setMaxResults] = useState(60);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +58,9 @@ export default function ScraperPage() {
     try {
       await apiFetch("/api/scrapes", {
         method: "POST",
-        body: JSON.stringify({ query, location, maxResults }),
+        body: JSON.stringify({ query, language, maxResults }),
       });
       setQuery("");
-      setLocation("");
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : t.scraper.startFailed);
@@ -91,7 +90,7 @@ export default function ScraperPage() {
       <div className="p-8 space-y-6">
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-xs p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+            <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.scraper.whatLookingFor}</label>
               <input
                 required
@@ -102,21 +101,22 @@ export default function ScraperPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.scraper.location}</label>
-              <input
-                required
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder={t.scraper.locationPlaceholder}
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.scraper.language}</label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+              >
+                <option value="en">{t.scraper.languageEnglish}</option>
+                <option value="ar">{t.scraper.languageArabic}</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.scraper.maxResults}</label>
               <input
                 type="number"
                 min={1}
-                max={200}
+                max={10000}
                 value={maxResults}
                 onChange={(e) => setMaxResults(parseInt(e.target.value, 10) || 1)}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -147,9 +147,7 @@ export default function ScraperPage() {
               <div className="flex items-start justify-between gap-4">
                 <Link href={`/scraper/${j.id}`} className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-900 truncate">
-                      {j.query} · {j.location}
-                    </p>
+                    <p className="font-semibold text-gray-900 truncate">{j.query}</p>
                     <Badge status={j.status} />
                   </div>
                   <p className="text-sm text-gray-500 mt-1">

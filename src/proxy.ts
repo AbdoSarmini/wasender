@@ -24,7 +24,9 @@ export async function proxy(req: NextRequest) {
 
   const isPublic =
     pathname === "/login" ||
+    pathname === "/setup" ||
     pathname.startsWith("/api/auth/login") ||
+    pathname.startsWith("/api/auth/setup") ||
     pathname.startsWith("/api/health") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
@@ -44,7 +46,11 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const isAdminOnly = pathname.startsWith("/api/users") || pathname.startsWith("/users");
+  const isAdminOnly =
+    pathname.startsWith("/api/users") ||
+    pathname.startsWith("/users") ||
+    pathname.startsWith("/api/scrapes") ||
+    pathname.startsWith("/scraper");
   if (isAdminOnly && session.role !== "admin") {
     if (pathname.startsWith("/api")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
     }))
   );
 
-  const filename = `${job.query}-${job.location}`.replace(/[^\w.-]+/g, "_").slice(0, 80) || "scrape-results";
+  const filename = job.query.replace(/[^\w.-]+/g, "_").slice(0, 80) || "scrape-results";
 
   return new NextResponse(csv, {
     headers: {

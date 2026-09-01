@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
 import { parseContactsCsv, type ParsedContactRow } from "@/lib/csv-contacts";
 import { useI18n } from "@/lib/i18n/context";
-import { ChevronDown, Loader2, Search, Upload, X } from "lucide-react";
+import Modal from "@/components/Modal";
+import { ChevronDown, Download, Loader2, Plus, Search, Upload, X } from "lucide-react";
 
 interface Device {
   id: string;
@@ -84,6 +85,8 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
   const [csvSkipped, setCsvSkipped] = useState(0);
   const [csvError, setCsvError] = useState("");
   const [saveCsvToContacts, setSaveCsvToContacts] = useState(false);
+  const [saveCsvGroupChoice, setSaveCsvGroupChoice] = useState("");
+  const [saveCsvNewGroupName, setSaveCsvNewGroupName] = useState("");
   const csvFileInputRef = useRef<HTMLInputElement>(null);
   const [minDelay, setMinDelay] = useState(initial?.minDelay ?? 5);
   const [maxDelay, setMaxDelay] = useState(initial?.maxDelay ?? 15);
@@ -93,6 +96,13 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateContent, setNewTemplateContent] = useState("");
+  const [newTemplateMedia, setNewTemplateMedia] = useState<File | null>(null);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [templateError, setTemplateError] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -197,6 +207,45 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
     }
   }
 
+  function openCreateTemplate() {
+    setNewTemplateName("");
+    setNewTemplateContent("");
+    setNewTemplateMedia(null);
+    setTemplateError("");
+    setShowTemplateModal(true);
+  }
+
+  async function handleCreateTemplate(e: React.FormEvent) {
+    e.preventDefault();
+    setTemplateError("");
+    setCreatingTemplate(true);
+    try {
+      const form = new FormData();
+      form.set("name", newTemplateName);
+      form.set("content", newTemplateContent);
+      if (newTemplateMedia) form.set("media", newTemplateMedia);
+      const data = await apiFetch<{ template: Template }>("/api/templates", { method: "POST", body: form });
+      setTemplates((prev) => [...prev, data.template]);
+      setTemplateId(data.template.id);
+      setShowTemplateModal(false);
+    } catch (err) {
+      setTemplateError(err instanceof ApiError ? err.message : t.templates.saveFailed);
+    } finally {
+      setCreatingTemplate(false);
+    }
+  }
+
+  function handleDownloadSampleCsv() {
+    const csv = "name,phone\nJohn Doe,+1234567890\nJane Smith,+1987654321\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sample-contacts.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function clearCsv() {
     setCsvFileName("");
     setCsvRows([]);
@@ -234,6 +283,8 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
         contactIds: selectedContacts.map((c) => c.id),
         csvContacts: csvRows,
         saveToContacts: saveCsvToContacts,
+        saveToContactsGroupId: saveCsvToContacts && !saveCsvNewGroupName.trim() ? saveCsvGroupChoice || null : null,
+        saveToContactsGroupName: saveCsvToContacts ? saveCsvNewGroupName.trim() || null : null,
         minDelay,
         maxDelay,
         scheduledAt,
@@ -293,7 +344,16 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t.campaignForm.messageTemplate}</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">{t.campaignForm.messageTemplate}</label>
+            <button
+              type="button"
+              onClick={openCreateTemplate}
+              className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+            >
+              <Plus size={12} /> {t.templates.newTemplate}
+            </button>
+          </div>
           <select
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
@@ -454,7 +514,16 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
               </div>
 
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">{t.campaignForm.uploadCsv}</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-medium text-gray-500">{t.campaignForm.uploadCsv}</p>
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleCsv}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+                  >
+                    <Download size={12} /> {t.contacts.sampleCsv}
+                  </button>
+                </div>
                 <p className="text-xs text-gray-400 mb-2">
                   {t.campaignForm.uploadCsvHintPrefix} <code>name</code> {t.campaignForm.uploadCsvHintAnd}{" "}
                   <code>phone</code>
@@ -496,15 +565,55 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
                 )}
                 {csvError && <p className="text-xs text-red-600 mt-1">{csvError}</p>}
                 {csvRows.length > 0 && (
-                  <label className="flex items-center gap-2 text-sm text-gray-700 mt-2">
-                    <input
-                      type="checkbox"
-                      checked={saveCsvToContacts}
-                      onChange={(e) => setSaveCsvToContacts(e.target.checked)}
-                      className="rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"
-                    />
-                    {t.campaignForm.alsoSaveToContacts}
-                  </label>
+                  <div className="mt-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={saveCsvToContacts}
+                        onChange={(e) => setSaveCsvToContacts(e.target.checked)}
+                        className="rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      {t.campaignForm.alsoSaveToContacts}
+                    </label>
+                    {saveCsvToContacts && (
+                      <div className="mt-2 pl-6 space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            {t.contacts.assignExistingGroup}
+                          </label>
+                          <select
+                            value={saveCsvGroupChoice}
+                            onChange={(e) => {
+                              setSaveCsvGroupChoice(e.target.value);
+                              setSaveCsvNewGroupName("");
+                            }}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
+                          >
+                            <option value="">{t.common.noGroup}</option>
+                            {groups.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            {t.contacts.orCreateNewGroup}
+                          </label>
+                          <input
+                            value={saveCsvNewGroupName}
+                            onChange={(e) => {
+                              setSaveCsvNewGroupName(e.target.value);
+                              if (e.target.value) setSaveCsvGroupChoice("");
+                            }}
+                            placeholder={t.contacts.newGroupPlaceholder}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -569,6 +678,51 @@ export default function CampaignForm({ campaignId, initial, submitLabel }: Props
           {submitLabel ?? (campaignId ? t.campaignForm.saveChanges : t.campaignForm.createCampaign)}
         </button>
       </form>
+
+      <Modal open={showTemplateModal} onClose={() => setShowTemplateModal(false)} title={t.templates.newTemplate}>
+        <form onSubmit={handleCreateTemplate} className="space-y-4">
+          {templateError && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{templateError}</div>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.templates.templateName}</label>
+            <input
+              value={newTemplateName}
+              onChange={(e) => setNewTemplateName(e.target.value)}
+              required
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
+              placeholder={t.templates.templateNamePlaceholder}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.templates.message}</label>
+            <textarea
+              value={newTemplateContent}
+              onChange={(e) => setNewTemplateContent(e.target.value)}
+              required
+              rows={5}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
+              placeholder={"Hi {{name}}, thanks for..."}
+            />
+            <p className="text-xs text-gray-400 mt-1">{t.templates.variableHint}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.templates.attachment}</label>
+            <input
+              type="file"
+              accept="image/*,video/*,application/pdf"
+              onChange={(e) => setNewTemplateMedia(e.target.files?.[0] || null)}
+              className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-700 file:text-sm file:font-medium"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={creatingTemplate}
+            className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-700 disabled:opacity-60"
+          >
+            {creatingTemplate && <Loader2 className="animate-spin" size={16} />}
+            {t.templates.createTemplate}
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 }

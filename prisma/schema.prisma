@@ -132,7 +132,7 @@ model ScrapeJob {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   query       String
-  location    String
+  language    String    @default("en")
   maxResults  Int       @default(60)
   status      String    @default("queued") // queued | running | completed | stopped | failed
   resultCount Int       @default(0)

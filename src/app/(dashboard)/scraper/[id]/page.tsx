@@ -14,7 +14,7 @@ import { ArrowLeft, Download, UserPlus, Square } from "lucide-react";
 interface ScrapeJob {
   id: string;
   query: string;
-  location: string;
+  language: string;
   maxResults: number;
   status: string;
   resultCount: number;
@@ -117,7 +117,7 @@ export default function ScrapeJobDetailPage() {
   return (
     <div>
       <PageHeader
-        title={`${job.query} · ${job.location}`}
+        title={job.query}
         description={t.scraper.resultsOfUpTo(job.resultCount, job.maxResults)}
         action={
           <div className="flex items-center gap-2">

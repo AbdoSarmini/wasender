@@ -66,12 +66,14 @@ already fetch a working Chromium.
 
 ```bash
 npm install
-cp .env.example .env      # then edit ADMIN_EMAIL / ADMIN_PASSWORD / SESSION_SECRET
+cp .env.example .env      # then edit SESSION_SECRET
 npx prisma migrate deploy # creates prisma/dev.db and applies the schema
 npm run dev                # http://localhost:3000
 ```
 
-Sign in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` from your `.env`, then:
+The first time you open the app with an empty database, you'll land on a
+setup page to create the admin account interactively — no env vars needed.
+Then:
 
 1. Go to **Devices** → **Add device** → scan the QR with WhatsApp on your
    phone (Settings → Linked devices → Link a device).
@@ -109,8 +111,6 @@ database, uploaded template media, and linked-device sessions.
 2. Under **Environment**, set:
    ```
    DATABASE_URL=file:/app/data/dev.db
-   ADMIN_EMAIL=you@yourdomain.com
-   ADMIN_PASSWORD=a-real-password
    SESSION_SECRET=a-long-random-string
    PORT=3000
    ```
@@ -126,23 +126,21 @@ database, uploaded template media, and linked-device sessions.
 5. Deploy. The container runs `prisma migrate deploy` automatically on
    startup (see `docker-entrypoint.sh`) before starting the server, so the
    first boot creates the schema.
-6. Once it's live at your domain, log in and go to **Devices → Add device**
-   to scan the QR code for real — this only works on a host with normal
-   outbound internet access to `web.whatsapp.com`.
+6. Once it's live at your domain, open it — with an empty database you'll
+   land on the setup page to create the admin account, then go to
+   **Devices → Add device** to scan the QR code for real — this only works
+   on a host with normal outbound internet access to `web.whatsapp.com`.
 
 If you'd rather deploy via Dokploy's **Docker Compose** application type
 instead, point it at `docker-compose.yml` — it defines the same four
-volumes as named volumes, and reads `ADMIN_EMAIL` / `ADMIN_PASSWORD` /
-`SESSION_SECRET` / `DEVICE_LIMIT` from the environment Dokploy injects.
+volumes as named volumes, and reads `SESSION_SECRET` / `DEVICE_LIMIT` from
+the environment Dokploy injects.
 
 ### Environment variables
 
 | Variable          | Purpose                                             |
 | ------------------ | --------------------------------------------------- |
 | `DATABASE_URL`     | SQLite file path for Prisma (default `file:./dev.db`) |
-| `ADMIN_EMAIL`      | Login email for the single admin account             |
-| `ADMIN_PASSWORD`   | Login password (plaintext env var — fine for a self-hosted single-operator tool; see `ADMIN_PASSWORD_HASH` below for a hashed alternative) |
-| `ADMIN_PASSWORD_HASH` | Optional bcrypt hash to use instead of `ADMIN_PASSWORD` |
 | `SESSION_SECRET`   | Secret used to sign the session JWT                   |
 | `PORT` / `HOST`    | Server bind address (default `0.0.0.0:3000`)          |
 | `DEVICE_LIMIT`     | Max number of WhatsApp devices (default `5`)          |

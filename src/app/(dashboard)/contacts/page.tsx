@@ -5,7 +5,9 @@ import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/context";
-import { Plus, Upload, Download, Users, Trash2, Search, Loader2 } from "lucide-react";
+import { Plus, Upload, Download, Users, Trash2, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 100;
 
 interface Group {
   id: string;
@@ -29,6 +31,7 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
+  const [page, setPage] = useState(1);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -58,12 +61,13 @@ export default function ContactsPage() {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (groupFilter !== "all") params.set("groupId", groupFilter);
-    params.set("pageSize", "100");
+    params.set("page", String(page));
+    params.set("pageSize", String(PAGE_SIZE));
     const data = await apiFetch<{ contacts: Contact[]; total: number }>(`/api/contacts?${params}`);
     setContacts(data.contacts);
     setTotal(data.total);
     setLoading(false);
-  }, [search, groupFilter]);
+  }, [search, groupFilter, page]);
 
   useEffect(() => {
     loadGroups();
@@ -72,6 +76,22 @@ export default function ContactsPage() {
   useEffect(() => {
     loadContacts();
   }, [loadContacts]);
+
+  // A new search/filter invalidates the current page — jump back to page 1
+  // rather than risk landing past the end of a now-smaller result set.
+  useEffect(() => {
+    setPage(1);
+  }, [search, groupFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // If a delete (or a group removal) empties the current page, step back
+  // instead of showing a blank page with contacts still waiting before it.
+  useEffect(() => {
+    if (!loading && contacts.length === 0 && page > 1) {
+      setPage((p) => p - 1);
+    }
+  }, [loading, contacts.length, page]);
 
   async function handleAddContact(e: React.FormEvent) {
     e.preventDefault();
@@ -248,6 +268,28 @@ export default function ContactsPage() {
             </tbody>
           </table>
         </div>
+
+        {total > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">{t.contacts.pageOf(page, totalPages)}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1 || loading}
+                className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={14} className="rtl:rotate-180" /> {t.contacts.previous}
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || loading}
+                className="flex items-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t.contacts.next} <ChevronRight size={14} className="rtl:rotate-180" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title={t.contacts.addContactTitle}>

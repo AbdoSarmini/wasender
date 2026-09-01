@@ -57,6 +57,8 @@ export async function POST(req: NextRequest) {
   const contactIds: string[] = Array.isArray(body?.contactIds) ? body.contactIds : [];
   const csvContacts = readCsvContacts(body);
   const saveToContacts = Boolean(body?.saveToContacts);
+  const saveToContactsGroupId = (body?.saveToContactsGroupId as string) || null;
+  const saveToContactsGroupName = (body?.saveToContactsGroupName as string)?.trim() || null;
   const minDelay = Math.max(1, parseInt(body?.minDelay ?? 5, 10) || 5);
   const maxDelay = Math.max(minDelay, parseInt(body?.maxDelay ?? 15, 10) || 15);
 
@@ -90,6 +92,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  let saveGroupId: string | null = null;
+  if (saveToContacts) {
+    if (saveToContactsGroupId) {
+      const group = await prisma.group.findUnique({ where: { id: saveToContactsGroupId, userId } });
+      if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
+      saveGroupId = group.id;
+    } else if (saveToContactsGroupName) {
+      const group = await prisma.group.upsert({
+        where: { userId_name: { userId, name: saveToContactsGroupName } },
+        update: {},
+        create: { name: saveToContactsGroupName, userId },
+      });
+      saveGroupId = group.id;
+    }
+  }
+
   const contacts = await prisma.contact.findMany({
     where: targetAll
       ? { userId }
@@ -114,8 +132,10 @@ export async function POST(req: NextRequest) {
       for (const row of newCsvRows) {
         const contact = await prisma.contact.upsert({
           where: { userId_phone: { userId, phone: row.phone } },
-          update: { name: row.name, fields: row.fields },
-          create: { name: row.name, phone: row.phone, fields: row.fields, userId },
+          update: saveGroupId
+            ? { name: row.name, fields: row.fields, groupId: saveGroupId }
+            : { name: row.name, fields: row.fields },
+          create: { name: row.name, phone: row.phone, fields: row.fields, groupId: saveGroupId, userId },
         });
         savedIds.push(contact.id);
       }

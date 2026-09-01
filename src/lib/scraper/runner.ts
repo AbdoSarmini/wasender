@@ -44,7 +44,7 @@ class ScraperRunner extends EventEmitter {
     });
     this.emitProgress(jobId, { status: "running" });
 
-    this.run(jobId, job.query, job.location, job.maxResults)
+    this.run(jobId, job.query, job.language, job.maxResults)
       .then(async () => {
         if (this.stopFlags.has(jobId)) {
           const updated = await prisma.scrapeJob.update({
@@ -81,10 +81,10 @@ class ScraperRunner extends EventEmitter {
     }
   }
 
-  private async run(jobId: string, query: string, location: string, maxResults: number) {
+  private async run(jobId: string, query: string, language: string, maxResults: number) {
     await scrapeGoogleMaps(
       query,
-      location,
+      language,
       maxResults,
       async (place: ScrapedPlace) => {
         await this.saveResult(jobId, place);

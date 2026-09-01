@@ -11,7 +11,6 @@ import { campaignRunner } from "./src/lib/campaign/runner";
 import { startScheduler } from "./src/lib/campaign/scheduler";
 import { scraperRunner } from "./src/lib/scraper/runner";
 import { prisma } from "./src/lib/prisma";
-import { bootstrapAdminUser } from "./src/lib/bootstrap-admin";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "./src/lib/session-token";
 
 function parseCookie(header: string | undefined, name: string): string | null {
@@ -72,8 +71,6 @@ app.prepare().then(async () => {
     socket.join(socket.data.userId as string);
     socket.emit("connected", { ok: true });
   });
-
-  await bootstrapAdminUser();
 
   // A campaign that was mid-run when the process last exited can no longer
   // be actively driven by this (fresh) in-memory runner — surface it as

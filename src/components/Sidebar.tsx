@@ -27,13 +27,16 @@ export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
     { href: "/campaigns", label: t.sidebar.campaigns, icon: MessageSquare },
     { href: "/templates", label: t.sidebar.templates, icon: FileText },
     { href: "/contacts", label: t.sidebar.contacts, icon: Users },
-    { href: "/scraper", label: t.sidebar.scraper, icon: MapPin },
     { href: "/logs", label: t.sidebar.logs, icon: ScrollText },
     { href: "/devices", label: t.sidebar.devices, icon: Smartphone },
   ];
 
   const navItems = isAdmin
-    ? [...NAV_ITEMS, { href: "/users", label: t.sidebar.users, icon: UserCog }]
+    ? [
+        ...NAV_ITEMS,
+        { href: "/scraper", label: t.sidebar.scraper, icon: MapPin },
+        { href: "/users", label: t.sidebar.users, icon: UserCog },
+      ]
     : NAV_ITEMS;
 
   async function handleLogout() {

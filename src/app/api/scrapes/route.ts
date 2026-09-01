@@ -19,12 +19,13 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const query = (body?.query as string)?.trim();
-  const location = (body?.location as string)?.trim();
+  const languageRaw = (body?.language as string)?.trim().toLowerCase();
+  const language = languageRaw === "ar" ? "ar" : "en";
   const maxResultsRaw = parseInt(body?.maxResults, 10);
-  const maxResults = Number.isFinite(maxResultsRaw) ? Math.min(200, Math.max(1, maxResultsRaw)) : 60;
+  const maxResults = Number.isFinite(maxResultsRaw) ? Math.min(10000, Math.max(1, maxResultsRaw)) : 60;
 
-  if (!query || !location) {
-    return NextResponse.json({ error: "Search query and location are required" }, { status: 400 });
+  if (!query) {
+    return NextResponse.json({ error: "Search query is required" }, { status: 400 });
   }
 
   if (scraperRunner.isAnyActive()) {
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   const job = await prisma.scrapeJob.create({
-    data: { query, location, maxResults, status: "queued", userId: session.sub },
+    data: { query, language, maxResults, status: "queued", userId: session.sub },
   });
 
   try {
