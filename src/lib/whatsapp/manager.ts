@@ -29,6 +29,44 @@ const CACHE_DIR = path.join(process.cwd(), ".wwebjs_cache");
 class WhatsAppManager extends EventEmitter {
   private clients = new Map<string, any>();
   private state = new Map<string, DeviceRuntimeState>();
+  private debugTimers = new Map<string, NodeJS.Timeout>();
+
+  // Forwards the headless Chromium page's own console/network activity to
+  // the server logs, and periodically screenshots it — whatsapp-web.js's own
+  // events go silent if the injected page script never gets to fire them, so
+  // this is the only way to see what the page is actually doing/showing.
+  private attachPageDebug(deviceId: string, client: any) {
+    if (this.debugTimers.has(deviceId)) return;
+    const page = client.pupPage;
+    if (!page) return;
+
+    page.on("console", (msg: any) =>
+      console.log(`[wa:${deviceId}:console:${msg.type()}]`, msg.text())
+    );
+    page.on("pageerror", (err: Error) => console.error(`[wa:${deviceId}:pageerror]`, err.message));
+    page.on("requestfailed", (req: any) =>
+      console.error(`[wa:${deviceId}:reqfailed]`, req.url(), req.failure()?.errorText)
+    );
+
+    const screenshotPath = path.join(CACHE_DIR, `debug-${deviceId}.png`);
+    const timer = setInterval(async () => {
+      try {
+        await page.screenshot({ path: screenshotPath });
+        console.log(`[wa:${deviceId}] debug screenshot -> ${screenshotPath}`);
+      } catch (err) {
+        console.error(`[wa:${deviceId}] screenshot failed`, err);
+      }
+    }, 10000);
+    this.debugTimers.set(deviceId, timer);
+  }
+
+  private stopPageDebug(deviceId: string) {
+    const timer = this.debugTimers.get(deviceId);
+    if (timer) {
+      clearInterval(timer);
+      this.debugTimers.delete(deviceId);
+    }
+  }
 
   getState(deviceId: string): DeviceRuntimeState {
     return this.state.get(deviceId) ?? { status: "disconnected" };
@@ -81,6 +119,7 @@ class WhatsAppManager extends EventEmitter {
       const dataUrl = await QRCode.toDataURL(qr);
       this.setState(deviceId, { status: "qr", qr: dataUrl });
       await prisma.device.update({ where: { id: deviceId }, data: { status: "qr" } }).catch(() => {});
+      this.attachPageDebug(deviceId, client);
     });
 
     client.on("authenticated", async () => {
@@ -98,6 +137,7 @@ class WhatsAppManager extends EventEmitter {
       await prisma.device
         .update({ where: { id: deviceId }, data: { status: "connected", phone } })
         .catch(() => {});
+      this.stopPageDebug(deviceId);
     });
 
     client.on("auth_failure", async (msg: string) => {
@@ -106,6 +146,7 @@ class WhatsAppManager extends EventEmitter {
       await prisma.device
         .update({ where: { id: deviceId }, data: { status: "disconnected" } })
         .catch(() => {});
+      this.stopPageDebug(deviceId);
     });
 
     client.on("disconnected", async (reason: string) => {
@@ -115,6 +156,7 @@ class WhatsAppManager extends EventEmitter {
         .update({ where: { id: deviceId }, data: { status: "disconnected" } })
         .catch(() => {});
       this.clients.delete(deviceId);
+      this.stopPageDebug(deviceId);
       try {
         await client.destroy();
       } catch {
