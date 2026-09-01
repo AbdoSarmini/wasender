@@ -71,6 +71,8 @@ function startServer() {
       APP_ROOT: appRoot,
       PORT,
       HOST,
+      // Skips account creation/login — see src/lib/local-mode.ts.
+      LOCAL_MODE: "1",
       // tsx resolves "@/*" path aliases by looking for tsconfig.json
       // starting from process.cwd() — which is userDataDir here, not
       // appRoot — so it has to be told explicitly where to find it.

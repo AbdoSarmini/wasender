@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import { LOCAL_MODE } from "@/lib/local-mode";
 
 // Public: lets the client know whether to show the first-run setup page
-// instead of the login page.
+// instead of the login page (or, in the desktop build, to skip both and
+// auto-login as the local account via /api/auth/local-login).
 export async function GET() {
   const userCount = await prisma.user.count();
-  return NextResponse.json({ needsSetup: userCount === 0 });
+  return NextResponse.json({ needsSetup: userCount === 0, localMode: LOCAL_MODE });
 }
 
 // Public, but only does anything the very first time — once any user

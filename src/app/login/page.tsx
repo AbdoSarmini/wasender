@@ -20,6 +20,11 @@ function LoginForm() {
       try {
         const res = await fetch("/api/auth/setup");
         const data = await res.json();
+        if (data.localMode) {
+          await fetch("/api/auth/local-login", { method: "POST" });
+          router.replace(params.get("next") || "/");
+          return;
+        }
         if (data.needsSetup) {
           router.replace("/setup");
           return;
@@ -29,7 +34,7 @@ function LoginForm() {
       }
       setChecking(false);
     })();
-  }, [router]);
+  }, [router, params]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
