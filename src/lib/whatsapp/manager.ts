@@ -68,12 +68,14 @@ class WhatsAppManager extends EventEmitter {
     });
 
     client.on("qr", async (qr: string) => {
+      console.log(`[wa:${deviceId}] qr`);
       const dataUrl = await QRCode.toDataURL(qr);
       this.setState(deviceId, { status: "qr", qr: dataUrl });
       await prisma.device.update({ where: { id: deviceId }, data: { status: "qr" } }).catch(() => {});
     });
 
     client.on("authenticated", async () => {
+      console.log(`[wa:${deviceId}] authenticated`);
       this.setState(deviceId, { status: "authenticated", qr: undefined });
       await prisma.device
         .update({ where: { id: deviceId }, data: { status: "authenticated" } })
@@ -81,6 +83,7 @@ class WhatsAppManager extends EventEmitter {
     });
 
     client.on("ready", async () => {
+      console.log(`[wa:${deviceId}] ready`);
       const phone = client.info?.wid?.user;
       this.setState(deviceId, { status: "connected", qr: undefined, phone });
       await prisma.device
@@ -88,14 +91,16 @@ class WhatsAppManager extends EventEmitter {
         .catch(() => {});
     });
 
-    client.on("auth_failure", async () => {
+    client.on("auth_failure", async (msg: string) => {
+      console.error(`[wa:${deviceId}] auth_failure`, msg);
       this.setState(deviceId, { status: "disconnected", qr: undefined });
       await prisma.device
         .update({ where: { id: deviceId }, data: { status: "disconnected" } })
         .catch(() => {});
     });
 
-    client.on("disconnected", async () => {
+    client.on("disconnected", async (reason: string) => {
+      console.error(`[wa:${deviceId}] disconnected`, reason);
       this.setState(deviceId, { status: "disconnected", qr: undefined });
       await prisma.device
         .update({ where: { id: deviceId }, data: { status: "disconnected" } })
