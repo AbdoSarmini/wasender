@@ -46,11 +46,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const isAdminOnly =
-    pathname.startsWith("/api/users") ||
-    pathname.startsWith("/users") ||
-    pathname.startsWith("/api/scrapes") ||
-    pathname.startsWith("/scraper");
+  const isAdminOnly = pathname.startsWith("/api/users") || pathname.startsWith("/users");
   if (isAdminOnly && session.role !== "admin") {
     if (pathname.startsWith("/api")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
