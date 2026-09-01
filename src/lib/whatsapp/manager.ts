@@ -65,6 +65,15 @@ class WhatsAppManager extends EventEmitter {
         ],
       },
       cacheDir: CACHE_DIR,
+      // The bundled local version index can go stale between whatsapp-web.js
+      // releases (WhatsApp changes their web client often), silently hanging
+      // the client right after auth with no error. Fetching the index remotely
+      // keeps it current without needing a whatsapp-web.js upgrade every time.
+      webVersionCache: {
+        type: "remote",
+        remotePath:
+          "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html",
+      },
     });
 
     client.on("qr", async (qr: string) => {
