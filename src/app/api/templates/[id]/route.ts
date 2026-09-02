@@ -57,14 +57,6 @@ export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: s
   const existing = await prisma.template.findUnique({ where: { id: params.id, userId: session.sub } });
   if (!existing) return NextResponse.json({ error: "Template not found" }, { status: 404 });
 
-  const usedByCampaign = await prisma.campaign.count({ where: { templateId: params.id } });
-  if (usedByCampaign > 0) {
-    return NextResponse.json(
-      { error: "Cannot delete a template used by existing campaigns." },
-      { status: 400 }
-    );
-  }
-
   if (existing.mediaPath) deleteUploadedFile(existing.mediaPath);
   await prisma.template.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });

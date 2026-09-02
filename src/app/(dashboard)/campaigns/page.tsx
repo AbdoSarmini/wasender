@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
 import { useI18n } from "@/lib/i18n/context";
@@ -20,12 +21,13 @@ interface Campaign {
   createdAt: string;
   scheduledAt: string | null;
   device: { name: string; status: string } | null;
-  template: { name: string };
+  template: { name: string } | null;
 }
 
 export default function CampaignsPage() {
   const router = useRouter();
   const { t } = useI18n();
+  const { notify } = useDialogs();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export default function CampaignsPage() {
   }, [load]);
 
   async function handleAction(id: string, action: "start" | "pause" | "resume" | "stop" | "unschedule") {
-    await apiFetch(`/api/campaigns/${id}/${action}`, { method: "POST" }).catch((e) => alert(e.message));
+    await apiFetch(`/api/campaigns/${id}/${action}`, { method: "POST" }).catch((e) => notify(e.message));
     load();
   }
 
@@ -62,7 +64,7 @@ export default function CampaignsPage() {
       });
       router.push(`/campaigns/${data.campaign.id}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : t.campaigns.duplicateFailed);
+      notify(err instanceof Error ? err.message : t.campaigns.duplicateFailed);
     } finally {
       setDuplicatingId(null);
     }
@@ -106,7 +108,7 @@ export default function CampaignsPage() {
                       <Badge status={c.status} />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {c.device?.name ?? t.common.deviceRemoved} · {c.template.name} ·{" "}
+                      {c.device?.name ?? t.common.deviceRemoved} · {c.template?.name ?? t.common.templateRemoved} ·{" "}
                       {t.campaigns.sentOf(c.sentCount, c.totalCount)}
                       {c.failedCount > 0 ? t.campaigns.failedSuffix(c.failedCount) : ""}
                       {c.status === "scheduled" && c.scheduledAt

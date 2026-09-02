@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/context";
 import { LOCALE_COOKIE, type Locale } from "@/lib/i18n/constants";
+import { DialogProvider } from "@/components/DialogProvider";
 
 export const metadata: Metadata = {
   title: "WaSender - WhatsApp Bulk Campaign Sender",
@@ -16,7 +17,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <body>
-        <I18nProvider initialLocale={locale}>{children}</I18nProvider>
+        <I18nProvider initialLocale={locale}>
+          <DialogProvider>{children}</DialogProvider>
+        </I18nProvider>
       </body>
     </html>
   );

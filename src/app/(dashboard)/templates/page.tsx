@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/context";
 import { Plus, FileText, Trash2, Pencil, Paperclip, X, Loader2 } from "lucide-react";
@@ -19,6 +20,7 @@ interface Template {
 
 export default function TemplatesPage() {
   const { t } = useI18n();
+  const { confirm, notify } = useDialogs();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -87,12 +89,12 @@ export default function TemplatesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t.templates.deleteConfirm)) return;
+    if (!(await confirm(t.templates.deleteConfirm))) return;
     try {
       await apiFetch(`/api/templates/${id}`, { method: "DELETE" });
       load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : t.templates.deleteFailed);
+      notify(err instanceof ApiError ? err.message : t.templates.deleteFailed);
     }
   }
 

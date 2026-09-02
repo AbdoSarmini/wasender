@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/context";
 import { Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
@@ -16,6 +17,7 @@ interface User {
 
 export default function UsersPage() {
   const { t } = useI18n();
+  const { confirm, notify } = useDialogs();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,17 +69,17 @@ export default function UsersPage() {
       });
       loadUsers();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : t.users.updateRoleFailed);
+      notify(err instanceof ApiError ? err.message : t.users.updateRoleFailed);
     }
   }
 
   async function handleDelete(u: User) {
-    if (!confirm(t.users.deleteConfirm(u.email))) return;
+    if (!(await confirm(t.users.deleteConfirm(u.email)))) return;
     try {
       await apiFetch(`/api/users/${u.id}`, { method: "DELETE" });
       loadUsers();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : t.users.deleteFailed);
+      notify(err instanceof ApiError ? err.message : t.users.deleteFailed);
     }
   }
 

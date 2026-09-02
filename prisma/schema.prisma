@@ -97,8 +97,8 @@ model Campaign {
   status      String    @default("draft") // draft | scheduled | queued | running | paused | completed | stopped | failed
   deviceId    String?
   device      Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
-  templateId  String
-  template    Template  @relation(fields: [templateId], references: [id])
+  templateId  String?
+  template    Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   minDelay    Int       @default(5) // seconds
   maxDelay    Int       @default(15) // seconds
   targetAll   Boolean   @default(false)
@@ -171,7 +171,7 @@ model CampaignMessage {
   campaignId String
   campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   contactId  String?
-  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   // Ad-hoc recipient data (CSV rows not saved to Contacts). Set when contactId is null.
   rawName    String?
   rawPhone   String?

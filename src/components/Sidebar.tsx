@@ -19,11 +19,13 @@ import clsx from "clsx";
 import { useI18n } from "@/lib/i18n/context";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import Modal from "@/components/Modal";
+import { useDialogs } from "@/components/DialogProvider";
 import { ApiError } from "@/lib/api";
 
 export default function Sidebar({ isAdmin = false, canBackup = false }: { isAdmin?: boolean; canBackup?: boolean }) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { confirm } = useDialogs();
   const [showBackup, setShowBackup] = useState(false);
 
   const NAV_ITEMS = [
@@ -134,7 +136,7 @@ function BackupModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       setError(t.backup.invalidFile);
       return;
     }
-    if (!window.confirm(t.backup.restoreConfirm)) return;
+    if (!(await confirm(t.backup.restoreConfirm))) return;
 
     setError("");
     setRestoring(true);

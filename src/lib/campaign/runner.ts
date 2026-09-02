@@ -81,6 +81,9 @@ class CampaignRunner extends EventEmitter {
     if (!campaign.deviceId) {
       throw new Error("This campaign's device was deleted — assign a device before starting it");
     }
+    if (!campaign.templateId) {
+      throw new Error("This campaign's template was deleted — assign a template before starting it");
+    }
     if (!waManager.isReady(campaign.deviceId)) {
       throw new Error("Selected device is not connected");
     }
@@ -139,7 +142,13 @@ class CampaignRunner extends EventEmitter {
       this.emitProgress(campaignId, { status: "failed", error: "This campaign's device was deleted" });
       return;
     }
+    if (!campaign.template) {
+      await prisma.campaign.update({ where: { id: campaignId }, data: { status: "failed" } });
+      this.emitProgress(campaignId, { status: "failed", error: "This campaign's template was deleted" });
+      return;
+    }
     const deviceId = campaign.deviceId;
+    const template = campaign.template;
 
     while (true) {
       const flag = this.control.get(campaignId);
@@ -180,14 +189,14 @@ class CampaignRunner extends EventEmitter {
       });
 
       try {
-        const text = renderTemplate(campaign.template.content, recipient);
+        const text = renderTemplate(template.content, recipient);
         const chatId = waManager.toChatId(recipient.phone);
 
-        if (campaign.template.mediaPath) {
-          const filePath = path.isAbsolute(campaign.template.mediaPath)
-            ? campaign.template.mediaPath
-            : path.join(/* turbopackIgnore: true */ process.cwd(), campaign.template.mediaPath);
-          await waManager.sendMedia(deviceId, chatId, text, filePath, campaign.template.mediaName ?? undefined);
+        if (template.mediaPath) {
+          const filePath = path.isAbsolute(template.mediaPath)
+            ? template.mediaPath
+            : path.join(/* turbopackIgnore: true */ process.cwd(), template.mediaPath);
+          await waManager.sendMedia(deviceId, chatId, text, filePath, template.mediaName ?? undefined);
         } else {
           await waManager.sendText(deviceId, chatId, text);
         }

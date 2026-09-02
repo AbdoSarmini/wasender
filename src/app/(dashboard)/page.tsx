@@ -30,7 +30,7 @@ interface Stats {
     failedCount: number;
     totalCount: number;
     device: { name: string } | null;
-    template: { name: string };
+    template: { name: string } | null;
   }>;
 }
 
@@ -107,7 +107,7 @@ export default function OverviewPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-gray-900 truncate">{c.name}</p>
                   <p className="text-sm text-gray-500 truncate">
-                    {c.device?.name ?? t.common.deviceRemoved} · {c.template.name} ·{" "}
+                    {c.device?.name ?? t.common.deviceRemoved} · {c.template?.name ?? t.common.templateRemoved} ·{" "}
                     {t.overview.sentOf(c.sentCount, c.totalCount)}
                     {c.failedCount > 0 ? t.overview.failedSuffix(c.failedCount) : ""}
                   </p>

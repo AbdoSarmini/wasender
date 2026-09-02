@@ -1,4 +1,5 @@
 import { createServer } from "http";
+import { spawnSync } from "child_process";
 import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
@@ -12,6 +13,7 @@ import { startScheduler } from "./src/lib/campaign/scheduler";
 import { scraperRunner } from "./src/lib/scraper/runner";
 import { prisma } from "./src/lib/prisma";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "./src/lib/session-token";
+import { applyPendingRestoreIfAny } from "./src/lib/backup";
 
 function parseCookie(header: string | undefined, name: string): string | null {
   if (!header) return null;
@@ -39,6 +41,27 @@ const app = next({ dev, dir: process.env.APP_ROOT || process.cwd() });
 const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
+  // Must run before anything below opens dev.db or .wwebjs_auth — see the
+  // comment on applyPendingRestoreIfAny() for why the actual restore happens
+  // here, in a fresh process, instead of in the request handler that staged
+  // it (src/app/api/backup/restore/route.ts).
+  if (await applyPendingRestoreIfAny()) {
+    // The restored database file may predate migrations applied since that
+    // backup was taken — electron/main.js already ran migrate deploy before
+    // this process started, but that was against the database this restore
+    // just replaced, so it has to run again against the one now in place.
+    const appRoot = process.env.APP_ROOT || process.cwd();
+    const prismaCli = require.resolve("prisma/build/index.js", { paths: [appRoot] });
+    const result = spawnSync(process.execPath, [prismaCli, "migrate", "deploy"], {
+      cwd: appRoot,
+      env: process.env,
+      stdio: "inherit",
+    });
+    if (result.status !== 0) {
+      throw new Error(`prisma migrate deploy failed with exit code ${result.status} after restoring backup`);
+    }
+  }
+
   const server = createServer((req, res) => {
     handle(req, res);
   });

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
 import { useI18n } from "@/lib/i18n/context";
@@ -34,7 +35,7 @@ interface CampaignDetail {
   startedAt: string | null;
   completedAt: string | null;
   device: { name: string } | null;
-  template: { name: string; content: string };
+  template: { name: string; content: string } | null;
   messages: Message[];
 }
 
@@ -42,6 +43,7 @@ export default function CampaignDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
+  const { confirm, notify } = useDialogs();
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
@@ -75,12 +77,12 @@ export default function CampaignDetailPage() {
       await apiFetch(`/api/campaigns/${params.id}/${action}`, { method: "POST" });
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : t.campaigns.actionFailed);
+      notify(err instanceof Error ? err.message : t.campaigns.actionFailed);
     }
   }
 
   async function handleDelete() {
-    if (!confirm(t.campaignDetail.deleteConfirm)) return;
+    if (!(await confirm(t.campaignDetail.deleteConfirm))) return;
     await apiFetch(`/api/campaigns/${params.id}`, { method: "DELETE" });
     router.push("/campaigns");
   }
@@ -93,7 +95,7 @@ export default function CampaignDetailPage() {
       });
       router.push(`/campaigns/${data.campaign.id}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : t.campaigns.duplicateFailed);
+      notify(err instanceof Error ? err.message : t.campaigns.duplicateFailed);
     } finally {
       setDuplicating(false);
     }
@@ -111,7 +113,7 @@ export default function CampaignDetailPage() {
     <div>
       <PageHeader
         title={campaign.name}
-        description={`${campaign.device?.name ?? t.common.deviceRemoved} · ${campaign.template.name}`}
+        description={`${campaign.device?.name ?? t.common.deviceRemoved} · ${campaign.template?.name ?? t.common.templateRemoved}`}
         action={
           <div className="flex items-center gap-2">
             {(campaign.status === "draft" || campaign.status === "stopped" || campaign.status === "scheduled") && (

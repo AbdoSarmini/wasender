@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
 import { useI18n } from "@/lib/i18n/context";
@@ -22,6 +23,7 @@ interface ScrapeJob {
 
 export default function ScraperPage() {
   const { t } = useI18n();
+  const { confirm, notify } = useDialogs();
   const [jobs, setJobs] = useState<ScrapeJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -70,13 +72,13 @@ export default function ScraperPage() {
   }
 
   async function handleStop(id: string) {
-    await apiFetch(`/api/scrapes/${id}/stop`, { method: "POST" }).catch((e) => alert(e.message));
+    await apiFetch(`/api/scrapes/${id}/stop`, { method: "POST" }).catch((e) => notify(e.message));
     load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t.scraper.deleteConfirm)) return;
-    await apiFetch(`/api/scrapes/${id}`, { method: "DELETE" }).catch((e) => alert(e.message));
+    if (!(await confirm(t.scraper.deleteConfirm))) return;
+    await apiFetch(`/api/scrapes/${id}`, { method: "DELETE" }).catch((e) => notify(e.message));
     load();
   }
 

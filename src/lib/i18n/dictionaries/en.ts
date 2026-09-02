@@ -15,6 +15,8 @@ export const en = {
     contacts: "contacts",
     dash: "—",
     deviceRemoved: "Device removed",
+    templateRemoved: "Template removed",
+    ok: "OK",
   },
   sidebar: {
     appName: "WaSender",

@@ -16,3 +16,4 @@ uploads
 release
 electron/vendor
 .next-external-shims
+.pending-restore.zip

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
 import Modal from "@/components/Modal";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch, ApiError } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
 import { useI18n } from "@/lib/i18n/context";
@@ -23,6 +24,7 @@ function effectiveStatus(d: Device) {
 
 export default function DevicesPage() {
   const { t } = useI18n();
+  const { confirm, notify } = useDialogs();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -86,12 +88,12 @@ export default function DevicesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t.devices.deleteConfirm)) return;
+    if (!(await confirm(t.devices.deleteConfirm))) return;
     try {
       await apiFetch(`/api/devices/${id}`, { method: "DELETE" });
       load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : t.devices.deleteFailed);
+      notify(err instanceof ApiError ? err.message : t.devices.deleteFailed);
     }
   }
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import Badge from "@/components/Badge";
 import Modal from "@/components/Modal";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch } from "@/lib/api";
 import { getSocket } from "@/lib/socketClient";
 import { useI18n } from "@/lib/i18n/context";
@@ -44,6 +45,7 @@ export default function ScrapeJobDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
+  const { notify } = useDialogs();
   const [job, setJob] = useState<ScrapeJob | null>(null);
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,7 @@ export default function ScrapeJobDetailPage() {
   }, [params.id, load]);
 
   async function handleStop() {
-    await apiFetch(`/api/scrapes/${params.id}/stop`, { method: "POST" }).catch((e) => alert(e.message));
+    await apiFetch(`/api/scrapes/${params.id}/stop`, { method: "POST" }).catch((e) => notify(e.message));
     load();
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
+import { useDialogs } from "@/components/DialogProvider";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/context";
 import { Plus, Upload, Download, Users, Trash2, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -25,6 +26,7 @@ interface Contact {
 
 export default function ContactsPage() {
   const { t } = useI18n();
+  const { confirm } = useDialogs();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [total, setTotal] = useState(0);
@@ -150,14 +152,14 @@ export default function ContactsPage() {
   }
 
   async function handleDeleteGroup(id: string) {
-    if (!confirm(t.contacts.deleteGroupConfirm)) return;
+    if (!(await confirm(t.contacts.deleteGroupConfirm))) return;
     await apiFetch(`/api/groups/${id}`, { method: "DELETE" });
     loadGroups();
     loadContacts();
   }
 
   async function handleDeleteContact(id: string) {
-    if (!confirm(t.contacts.deleteContactConfirm)) return;
+    if (!(await confirm(t.contacts.deleteContactConfirm))) return;
     await apiFetch(`/api/contacts/${id}`, { method: "DELETE" });
     loadContacts();
   }

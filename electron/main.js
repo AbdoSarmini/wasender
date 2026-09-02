@@ -157,9 +157,13 @@ function createWindow() {
   });
 }
 
-// Re-runs migrations (the restored database file may predate migrations
-// applied since that backup was taken) and boots a fresh server process,
-// then points the existing window at wherever it ends up listening.
+// Boots a fresh server process and points the existing window at wherever
+// it ends up listening. The actual backup file replacement (and re-running
+// migrations against the restored database) happens inside that fresh
+// process, before it opens dev.db or .wwebjs_auth — see
+// applyPendingRestoreIfAny() in src/lib/backup.ts for why. The
+// runMigrations() call below runs against the old, about-to-be-replaced
+// database; harmless, just redundant for this specific restart.
 async function restartAfterRestore() {
   if (mainWindow) {
     mainWindow.webContents.executeJavaScript(

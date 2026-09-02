@@ -17,6 +17,8 @@ export const ar: Dictionary = {
     contacts: "جهات اتصال",
     dash: "—",
     deviceRemoved: "تم حذف الجهاز",
+    templateRemoved: "تم حذف القالب",
+    ok: "موافق",
   },
   sidebar: {
     appName: "WaSender",
