@@ -209,6 +209,22 @@ class WhatsAppManager extends EventEmitter {
       .catch(() => {});
   }
 
+  // Closes every active client's Chrome instance WITHOUT deleting its
+  // LocalAuth session (unlike logout()) — used before a backup restore
+  // replaces .wwebjs_auth on disk, since Windows keeps that directory's
+  // files locked while Chrome still has them open.
+  async stopAll() {
+    for (const [deviceId, client] of this.clients) {
+      this.stopPageDebug(deviceId);
+      try {
+        await client.destroy();
+      } catch {
+        // ignore
+      }
+    }
+    this.clients.clear();
+  }
+
   isReady(deviceId: string) {
     return this.getState(deviceId).status === "connected" && this.clients.has(deviceId);
   }

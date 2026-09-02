@@ -42,6 +42,13 @@ const databaseUrl = `file:${dbPath}`;
 let serverProcess = null;
 let mainWindow = null;
 
+// Kept in sync with src/app/api/backup/restore/route.ts, which exits the
+// server process with this code once it's finished replacing the database
+// and .wwebjs_auth on disk — a fresh process is the only clean way to pick
+// those up, since the old one's Prisma/whatsapp-web.js connections to the
+// now-replaced files were already closed before it exited.
+const RESTORE_RESTART_CODE = 75;
+
 function ensureNodeBinary() {
   if (fs.existsSync(nodeBinary)) return;
   dialog.showErrorBox(
@@ -97,6 +104,10 @@ function startServer() {
 
   serverProcess.on("exit", (code) => {
     serverProcess = null;
+    if (code === RESTORE_RESTART_CODE) {
+      restartAfterRestore();
+      return;
+    }
     if (code !== 0 && mainWindow) {
       mainWindow.webContents.executeJavaScript(
         `document.body.innerText = "WaSender server exited unexpectedly (code ${code}). Restart the app."`
@@ -144,6 +155,26 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+}
+
+// Re-runs migrations (the restored database file may predate migrations
+// applied since that backup was taken) and boots a fresh server process,
+// then points the existing window at wherever it ends up listening.
+async function restartAfterRestore() {
+  if (mainWindow) {
+    mainWindow.webContents.executeJavaScript(
+      `document.body.innerText = "Restoring backup..."`
+    ).catch(() => {});
+  }
+  try {
+    runMigrations();
+    PORT = await startServer();
+  } catch (err) {
+    console.error(err);
+    dialog.showErrorBox("WaSender", "Failed to restart the server after restoring a backup. Please restart the app.");
+    return;
+  }
+  if (mainWindow) mainWindow.loadURL(`http://${HOST}:${PORT}`);
 }
 
 app.whenReady().then(async () => {

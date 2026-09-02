@@ -342,6 +342,24 @@ export const en = {
     updateRoleFailed: "Failed to update role",
     deleteFailed: "Failed to delete user",
   },
+  backup: {
+    navLabel: "Backup & Restore",
+    title: "Backup & Restore",
+    description:
+      "Export everything — contacts, templates, campaigns, and linked WhatsApp device sessions — into one file, or restore from a previous backup.",
+    downloadBackup: "Download backup",
+    downloadingBackup: "Preparing backup…",
+    downloadFailed: "Failed to create backup",
+    restoreTitle: "Restore from backup",
+    restoreWarning:
+      "Restoring will replace all current data — contacts, templates, campaigns, and linked devices — with the contents of the backup file. This cannot be undone.",
+    chooseFile: "Choose backup file…",
+    restoreButton: "Restore backup",
+    restoreConfirm: "This will erase all current data and replace it with the backup. Continue?",
+    restoring: "Restoring backup… the app will restart automatically.",
+    restoreFailed: "Restore failed",
+    invalidFile: "Please select a .zip backup file",
+  },
 };
 
 export type Dictionary = typeof en;

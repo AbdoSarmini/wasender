@@ -1,6 +1,6 @@
 {
   "name": "wasender",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "main": "electron/main.js",
   "engines": {
@@ -21,6 +21,7 @@
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "adm-zip": "^0.6.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "electron-updater": "^6.3.9",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "^24.13.3",
     "@types/papaparse": "^5.3.14",
     "@types/qrcode": "^1.5.5",
