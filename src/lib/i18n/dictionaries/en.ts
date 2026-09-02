@@ -14,6 +14,7 @@ export const en = {
     back: "Back",
     contacts: "contacts",
     dash: "—",
+    deviceRemoved: "Device removed",
   },
   sidebar: {
     appName: "WaSender",
@@ -255,6 +256,7 @@ export const en = {
     scanInstructions: "Open WhatsApp on your phone → Settings → Linked devices → Link a device, then scan this code.",
     connectedSuccessfully: "Connected successfully!",
     waitingForQr: "Waiting for QR code…",
+    authenticating: "Scan successful — connecting to WhatsApp… this can take a moment.",
     addFailed: "Failed to add device",
     deleteConfirm: "Remove this device? This cannot be undone.",
     deleteFailed: "Failed to delete device",

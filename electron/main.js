@@ -13,34 +13,20 @@
 const { app, BrowserWindow, shell, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const http = require("http");
-const net = require("net");
 const { spawn, spawnSync } = require("child_process");
 const { autoUpdater } = require("electron-updater");
 
 const HOST = "127.0.0.1";
-// Resolved at startup in app.whenReady(): if PORT env var isn't set, we probe
-// for a free port instead of assuming 3000 is ours — otherwise, if something
-// else is already listening there, waitForServer() would happily treat that
-// other server's response as "WaSender is ready" and load its page instead.
-let PORT = process.env.PORT || null;
-
-function findFreePort(preferred) {
-  return new Promise((resolve) => {
-    const tester = net.createServer();
-    tester.once("error", () => {
-      const fallback = net.createServer();
-      fallback.listen(0, HOST, () => {
-        const { port } = fallback.address();
-        fallback.close(() => resolve(port));
-      });
-    });
-    tester.once("listening", () => {
-      tester.close(() => resolve(preferred));
-    });
-    tester.listen(preferred, HOST);
-  });
-}
+const PREFERRED_PORT = process.env.PORT || "3000";
+// Set once startServer()'s child reports which port it actually bound (see
+// server.ts's tryListen) — this is the ONLY source of truth for the port.
+// A prior version pre-checked the port from the Electron side before
+// spawning the server, but that left a gap between "port looked free" and
+// the server actually binding it: if something else grabbed the port in
+// that gap, the real server would fail to bind and crash, while this
+// process kept polling the port anyway and happily loaded whatever else
+// answered there instead of WaSender.
+let PORT = null;
 
 // In dev, `electron .` is launched from the project root. Packaged builds
 // use asar:false (whatsapp-web.js/puppeteer/prisma ship native binaries that
@@ -81,6 +67,8 @@ function runMigrations() {
   }
 }
 
+// Resolves with the port server.ts actually bound, parsed off its stdout
+// (see the WASENDER_LISTENING_PORT line it prints once listen() succeeds).
 function startServer() {
   const tsxPkg = require.resolve("tsx/package.json", { paths: [appRoot] });
   const tsxCli = path.join(path.dirname(tsxPkg), "dist", "cli.mjs");
@@ -92,7 +80,7 @@ function startServer() {
       NODE_ENV: "production",
       DATABASE_URL: databaseUrl,
       APP_ROOT: appRoot,
-      PORT,
+      PORT: PREFERRED_PORT,
       HOST,
       // Skips account creation/login — see src/lib/local-mode.ts.
       LOCAL_MODE: "1",
@@ -101,9 +89,11 @@ function startServer() {
       // appRoot — so it has to be told explicitly where to find it.
       TSX_TSCONFIG_PATH: path.join(appRoot, "tsconfig.json"),
     },
-    stdio: "inherit",
+    stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
+
+  serverProcess.stderr.on("data", (chunk) => process.stderr.write(chunk));
 
   serverProcess.on("exit", (code) => {
     serverProcess = null;
@@ -113,19 +103,23 @@ function startServer() {
       );
     }
   });
-}
 
-function waitForServer(retriesLeft, onReady) {
-  const req = http.get({ host: HOST, port: PORT, path: "/", timeout: 1000 }, () => {
-    req.destroy();
-    onReady();
+  return new Promise((resolve, reject) => {
+    let buffered = "";
+    function onData(chunk) {
+      process.stdout.write(chunk);
+      buffered += chunk.toString();
+      const match = buffered.match(/WASENDER_LISTENING_PORT=(\d+)/);
+      if (match) {
+        serverProcess.stdout.off("data", onData);
+        resolve(parseInt(match[1], 10));
+      }
+    }
+    serverProcess.stdout.on("data", onData);
+    serverProcess.once("exit", (code) => {
+      if (code !== 0) reject(new Error(`WaSender server exited before it started listening (code ${code})`));
+    });
   });
-  req.on("error", () => {
-    req.destroy();
-    if (retriesLeft <= 0) throw new Error("WaSender server did not start in time");
-    setTimeout(() => waitForServer(retriesLeft - 1, onReady), 500);
-  });
-  req.on("timeout", () => req.destroy());
 }
 
 function createWindow() {
@@ -153,8 +147,6 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  if (!PORT) PORT = await findFreePort(3000);
-
   try {
     ensureNodeBinary();
     runMigrations();
@@ -164,11 +156,39 @@ app.whenReady().then(async () => {
     return;
   }
 
-  startServer();
-  waitForServer(40, createWindow);
+  try {
+    PORT = await startServer();
+  } catch (err) {
+    console.error(err);
+    dialog.showErrorBox("WaSender", "The WaSender server failed to start. Check the logs and restart the app.");
+    app.quit();
+    return;
+  }
+  createWindow();
 
   if (app.isPackaged) {
-    autoUpdater.checkForUpdatesAndNotify().catch((err) => console.error("auto-update check failed:", err));
+    // Don't let electron-updater silently run the installer in the background
+    // on quit (its default) — that produced a long, unexplained hang with no
+    // UI when the app closed. Instead prompt the user, and if they agree, run
+    // the installer visibly (isSilent: false) so its own progress UI shows.
+    autoUpdater.autoInstallOnAppQuit = false;
+
+    autoUpdater.on("update-downloaded", (info) => {
+      dialog
+        .showMessageBox(mainWindow, {
+          type: "info",
+          buttons: ["Restart Now", "Later"],
+          defaultId: 0,
+          title: "Update Ready",
+          message: `WaSender ${info.version} has been downloaded.`,
+          detail: "Restart now to install the update, or install it later by restarting the app yourself.",
+        })
+        .then(({ response }) => {
+          if (response === 0) autoUpdater.quitAndInstall(false, true);
+        });
+    });
+
+    autoUpdater.checkForUpdates().catch((err) => console.error("auto-update check failed:", err));
   }
 
   app.on("activate", () => {

@@ -21,14 +21,8 @@ export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: s
 
   await waManager.logout(device.id, device.clientId);
 
-  const campaignCount = await prisma.campaign.count({ where: { deviceId: device.id } });
-  if (campaignCount > 0) {
-    return NextResponse.json(
-      { error: "Cannot delete a device that has campaigns. Remove its campaigns first." },
-      { status: 400 }
-    );
-  }
-
+  // Campaign.deviceId is set to null on delete (onDelete: SetNull in the
+  // schema) — campaign history is preserved, it just loses its device link.
   await prisma.device.delete({ where: { id: device.id } });
   return NextResponse.json({ ok: true });
 }

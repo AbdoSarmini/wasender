@@ -19,7 +19,7 @@ interface CampaignDetail {
   id: string;
   name: string;
   status: string;
-  deviceId: string;
+  deviceId: string | null;
   templateId: string;
   targetAll: boolean;
   minDelay: number;
@@ -56,7 +56,7 @@ export default function EditCampaignPage() {
 
         setInitial({
           name: campaign.name,
-          deviceId: campaign.deviceId,
+          deviceId: campaign.deviceId ?? "",
           templateId: campaign.templateId,
           targetAll: campaign.targetAll,
           groupIds,

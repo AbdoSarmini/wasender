@@ -19,7 +19,7 @@ interface Campaign {
   totalCount: number;
   createdAt: string;
   scheduledAt: string | null;
-  device: { name: string; status: string };
+  device: { name: string; status: string } | null;
   template: { name: string };
 }
 
@@ -106,7 +106,8 @@ export default function CampaignsPage() {
                       <Badge status={c.status} />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {c.device.name} · {c.template.name} · {t.campaigns.sentOf(c.sentCount, c.totalCount)}
+                      {c.device?.name ?? t.common.deviceRemoved} · {c.template.name} ·{" "}
+                      {t.campaigns.sentOf(c.sentCount, c.totalCount)}
                       {c.failedCount > 0 ? t.campaigns.failedSuffix(c.failedCount) : ""}
                       {c.status === "scheduled" && c.scheduledAt
                         ? t.campaigns.scheduledFor(new Date(c.scheduledAt).toLocaleString())

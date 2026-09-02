@@ -95,8 +95,45 @@ app.prepare().then(async () => {
 
   startScheduler();
 
-  server.listen(port, hostname, () => {
-    // eslint-disable-next-line no-console
-    console.log(`> WaSender ready on http://${hostname}:${port}`);
+  // Devices that weren't explicitly logged out (status "disconnected") had a
+  // working session before this process last stopped — LocalAuth's saved
+  // session lets whatsapp-web.js reconnect them without a fresh QR scan, so
+  // do that automatically instead of requiring the user to hit "Reconnect"
+  // for every device by hand. Devices with no valid session just surface a
+  // QR code on the devices page like a manual reconnect would.
+  const devicesToReconnect = await prisma.device.findMany({
+    where: { status: { not: "disconnected" } },
   });
+  for (const device of devicesToReconnect) {
+    waManager.start(device.id, device.clientId).catch((err) => {
+      console.error(`[wa:${device.id}] auto-reconnect failed`, err);
+    });
+  }
+
+  // The Electron shell wants to know which port we actually bound (it may
+  // differ from `port` below if something else already holds it), so it
+  // knows what to load instead of guessing/pre-checking a port itself —
+  // pre-checking would leave a gap between "port looked free" and "we
+  // actually bound it" for something else to win the race in.
+  // A persistent (not .once-per-attempt) "error" handler, and passing no
+  // callback to .listen() itself, avoids a subtlety where Node registers a
+  // .listen() callback as a one-time "listening" listener that's never
+  // cleaned up if that attempt fails before ever emitting "listening" — a
+  // later successful attempt would then fire every prior attempt's stale
+  // callback too, alongside the current one.
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE" && port !== 0) {
+      server.listen(0, hostname); // fall back to any OS-assigned free port
+    } else {
+      throw err;
+    }
+  });
+  server.once("listening", () => {
+    const actualPort = (server.address() as import("net").AddressInfo).port;
+    // eslint-disable-next-line no-console
+    console.log(`> WaSender ready on http://${hostname}:${actualPort}`);
+    // eslint-disable-next-line no-console
+    console.log(`WASENDER_LISTENING_PORT=${actualPort}`);
+  });
+  server.listen(port, hostname);
 });

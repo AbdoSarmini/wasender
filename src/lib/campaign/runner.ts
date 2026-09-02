@@ -78,6 +78,9 @@ class CampaignRunner extends EventEmitter {
       include: { device: true, template: true },
     });
     if (!campaign) throw new Error("Campaign not found");
+    if (!campaign.deviceId) {
+      throw new Error("This campaign's device was deleted — assign a device before starting it");
+    }
     if (!waManager.isReady(campaign.deviceId)) {
       throw new Error("Selected device is not connected");
     }
@@ -131,6 +134,12 @@ class CampaignRunner extends EventEmitter {
       where: { id: campaignId },
       include: { device: true, template: true },
     });
+    if (!campaign.deviceId) {
+      await prisma.campaign.update({ where: { id: campaignId }, data: { status: "failed" } });
+      this.emitProgress(campaignId, { status: "failed", error: "This campaign's device was deleted" });
+      return;
+    }
+    const deviceId = campaign.deviceId;
 
     while (true) {
       const flag = this.control.get(campaignId);
@@ -178,15 +187,9 @@ class CampaignRunner extends EventEmitter {
           const filePath = path.isAbsolute(campaign.template.mediaPath)
             ? campaign.template.mediaPath
             : path.join(/* turbopackIgnore: true */ process.cwd(), campaign.template.mediaPath);
-          await waManager.sendMedia(
-            campaign.deviceId,
-            chatId,
-            text,
-            filePath,
-            campaign.template.mediaName ?? undefined
-          );
+          await waManager.sendMedia(deviceId, chatId, text, filePath, campaign.template.mediaName ?? undefined);
         } else {
-          await waManager.sendText(campaign.deviceId, chatId, text);
+          await waManager.sendText(deviceId, chatId, text);
         }
 
         await prisma.campaignMessage.update({

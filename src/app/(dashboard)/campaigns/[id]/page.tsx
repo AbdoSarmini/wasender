@@ -33,7 +33,7 @@ interface CampaignDetail {
   scheduledAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
-  device: { name: string };
+  device: { name: string } | null;
   template: { name: string; content: string };
   messages: Message[];
 }
@@ -111,7 +111,7 @@ export default function CampaignDetailPage() {
     <div>
       <PageHeader
         title={campaign.name}
-        description={`${campaign.device.name} · ${campaign.template.name}`}
+        description={`${campaign.device?.name ?? t.common.deviceRemoved} · ${campaign.template.name}`}
         action={
           <div className="flex items-center gap-2">
             {(campaign.status === "draft" || campaign.status === "stopped" || campaign.status === "scheduled") && (

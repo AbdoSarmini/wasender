@@ -16,6 +16,7 @@ export const ar: Dictionary = {
     back: "رجوع",
     contacts: "جهات اتصال",
     dash: "—",
+    deviceRemoved: "تم حذف الجهاز",
   },
   sidebar: {
     appName: "WaSender",
@@ -257,6 +258,7 @@ export const ar: Dictionary = {
     scanInstructions: "افتح واتساب على هاتفك ← الإعدادات ← الأجهزة المرتبطة ← ربط جهاز، ثم امسح هذا الرمز.",
     connectedSuccessfully: "تم الاتصال بنجاح!",
     waitingForQr: "بانتظار رمز QR…",
+    authenticating: "تم المسح بنجاح — جارٍ الاتصال بواتساب… قد يستغرق هذا بعض الوقت.",
     addFailed: "فشل إضافة الجهاز",
     deleteConfirm: "هل تريد إزالة هذا الجهاز؟ لا يمكن التراجع عن هذا الإجراء.",
     deleteFailed: "فشل حذف الجهاز",

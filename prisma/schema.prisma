@@ -95,8 +95,8 @@ model Campaign {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   status      String    @default("draft") // draft | scheduled | queued | running | paused | completed | stopped | failed
-  deviceId    String
-  device      Device    @relation(fields: [deviceId], references: [id])
+  deviceId    String?
+  device      Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
   templateId  String
   template    Template  @relation(fields: [templateId], references: [id])
   minDelay    Int       @default(5) // seconds

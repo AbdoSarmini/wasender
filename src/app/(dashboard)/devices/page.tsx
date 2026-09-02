@@ -223,6 +223,11 @@ export default function DevicesPage() {
             <div className="py-10">
               <p className="text-green-600 font-semibold">{t.devices.connectedSuccessfully}</p>
             </div>
+          ) : qrDevice?.runtime?.status === "authenticated" ? (
+            <div className="py-10 flex flex-col items-center gap-3 text-gray-500">
+              <Loader2 className="animate-spin" size={24} />
+              <p className="text-sm">{t.devices.authenticating}</p>
+            </div>
           ) : (
             <div className="py-10 flex flex-col items-center gap-3 text-gray-500">
               <Loader2 className="animate-spin" size={24} />
