@@ -14,11 +14,33 @@ const { app, BrowserWindow, shell, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
+const net = require("net");
 const { spawn, spawnSync } = require("child_process");
 const { autoUpdater } = require("electron-updater");
 
-const PORT = process.env.PORT || "3000";
 const HOST = "127.0.0.1";
+// Resolved at startup in app.whenReady(): if PORT env var isn't set, we probe
+// for a free port instead of assuming 3000 is ours — otherwise, if something
+// else is already listening there, waitForServer() would happily treat that
+// other server's response as "WaSender is ready" and load its page instead.
+let PORT = process.env.PORT || null;
+
+function findFreePort(preferred) {
+  return new Promise((resolve) => {
+    const tester = net.createServer();
+    tester.once("error", () => {
+      const fallback = net.createServer();
+      fallback.listen(0, HOST, () => {
+        const { port } = fallback.address();
+        fallback.close(() => resolve(port));
+      });
+    });
+    tester.once("listening", () => {
+      tester.close(() => resolve(preferred));
+    });
+    tester.listen(preferred, HOST);
+  });
+}
 
 // In dev, `electron .` is launched from the project root. Packaged builds
 // use asar:false (whatsapp-web.js/puppeteer/prisma ship native binaries that
@@ -130,7 +152,9 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (!PORT) PORT = await findFreePort(3000);
+
   try {
     ensureNodeBinary();
     runMigrations();

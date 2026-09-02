@@ -25,7 +25,7 @@ export default function ScraperPage() {
   const [jobs, setJobs] = useState<ScrapeJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState("ar");
   const [maxResults, setMaxResults] = useState(60);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

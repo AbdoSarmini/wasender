@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -9,7 +9,6 @@ import {
   Users,
   ScrollText,
   Smartphone,
-  LogOut,
   UserCog,
   MapPin,
 } from "lucide-react";
@@ -19,7 +18,6 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useI18n();
 
   const NAV_ITEMS = [
@@ -33,12 +31,6 @@ export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   ];
 
   const navItems = isAdmin ? [...NAV_ITEMS, { href: "/users", label: t.sidebar.users, icon: UserCog }] : NAV_ITEMS;
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  }
 
   return (
     <aside className="w-64 shrink-0 h-screen sticky top-0 bg-white border-r border-gray-100 rtl:border-r-0 rtl:border-l flex flex-col">
@@ -73,13 +65,6 @@ export default function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
 
       <div className="p-3 border-t border-gray-100 space-y-1">
         <LanguageSwitcher />
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-        >
-          <LogOut size={18} />
-          {t.sidebar.signOut}
-        </button>
       </div>
     </aside>
   );
