@@ -13,9 +13,10 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "fetch-node": "node scripts/fetch-node.js",
-    "electron:dev": "npm run fetch-node && npm run build && electron .",
-    "electron:build": "npm run fetch-node && npm run build && electron-builder",
-    "electron:publish": "npm run fetch-node && npm run build && electron-builder --publish always"
+    "fix-next-symlinks": "node scripts/fix-next-symlinks.js",
+    "electron:dev": "npm run fetch-node && npm run build && npm run fix-next-symlinks && electron .",
+    "electron:build": "npm run fetch-node && npm run build && npm run fix-next-symlinks && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
+    "electron:publish": "npm run fetch-node && npm run build && npm run fix-next-symlinks && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --publish always"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.9.1",
@@ -59,6 +60,8 @@
       "electron/**/*",
       "server.ts",
       "next.config.js",
+      "tsconfig.json",
+      "prisma.config.ts",
       ".next/**/*",
       "src/**/*",
       "prisma/schema.prisma",
@@ -69,6 +72,16 @@
     "extraMetadata": {
       "main": "electron/main.js"
     },
+    "extraResources": [
+      {
+        "from": "node_modules/.prisma",
+        "to": "app/node_modules/.prisma"
+      },
+      {
+        "from": ".next-external-shims",
+        "to": "app/node_modules"
+      }
+    ],
     "win": {
       "target": "nsis"
     },
@@ -79,7 +92,8 @@
     "publish": {
       "provider": "github",
       "owner": "AbdoSarmini",
-      "repo": "wasender"
+      "repo": "wasender",
+      "releaseType": "release"
     },
     "directories": {
       "output": "release"

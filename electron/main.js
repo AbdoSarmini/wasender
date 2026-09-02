@@ -52,6 +52,7 @@ function runMigrations() {
     cwd: appRoot,
     env: { ...process.env, DATABASE_URL: databaseUrl },
     stdio: "inherit",
+    windowsHide: true,
   });
   if (result.status !== 0) {
     throw new Error(`prisma migrate deploy failed with exit code ${result.status}`);
@@ -79,6 +80,7 @@ function startServer() {
       TSX_TSCONFIG_PATH: path.join(appRoot, "tsconfig.json"),
     },
     stdio: "inherit",
+    windowsHide: true,
   });
 
   serverProcess.on("exit", (code) => {
